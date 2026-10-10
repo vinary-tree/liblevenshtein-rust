@@ -182,6 +182,12 @@ impl<V: DictionaryValue + std::hash::Hash + Eq + Copy> TimeSeriesIndex<V> {
         self.keys.len()
     }
 
+    pub(crate) fn encoded_for_value(&self, value: &V) -> Option<&[u8]> {
+        self.locations
+            .get(value)
+            .map(|&(bucket_id, _)| self.keys[bucket_id].as_slice())
+    }
+
     /// Rebuild a verification index from its live values so replaced or
     /// removed quantized keys cannot accumulate indefinitely.
     #[cfg(any(feature = "ffi", test))]

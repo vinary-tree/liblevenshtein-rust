@@ -2000,6 +2000,50 @@ LLEV_API LlevStatus llev_quantized_cursor_original(
     double* out_samples, size_t capacity, size_t* out_len);
 LLEV_API void llev_quantized_cursor_free(LlevQuantizedCursor* cursor);
 
+typedef struct LlevHybridIndexConfig {
+    LlevQuantizedIndexConfig source;
+    double msm_cost;
+    double trie_threshold_multiplier;
+    uint32_t lower_bound_type;
+    uint32_t use_lower_bounds;
+} LlevHybridIndexConfig;
+typedef struct LlevHybridIndex LlevHybridIndex;
+typedef struct LlevHybridCursor LlevHybridCursor;
+
+/** Frozen hybrid search uses quantized byte-edit candidate filtering,
+ * optional MSM bound/heuristic pruning, then exact MSM verification.
+ * lower_bound_type: 0 safe length, 1 prefix Euclidean, 2 prefix L1,
+ * 3 combined. Types 1-3 can omit true MSM neighbors. Quantization can also
+ * omit them. A complete cursor proves only pipeline completion, not MSM
+ * recall. Invalid multiplier falls back to the Rust default.
+ * Source series and queries must be finite. */
+LLEV_API LlevStatus llev_hybrid_index_new(
+    const LlevHybridIndexConfig* config, LlevHybridIndex** out_index);
+LLEV_API LlevStatus llev_hybrid_index_insert(
+    LlevHybridIndex* index, uint64_t id,
+    const double* samples, size_t len);
+LLEV_API LlevStatus llev_hybrid_index_freeze(LlevHybridIndex* index);
+LLEV_API void llev_hybrid_index_free(LlevHybridIndex* index);
+LLEV_API LlevStatus llev_hybrid_index_query_range(
+    const LlevHybridIndex* index, const double* query, size_t query_len,
+    double cutoff, const LlevTemporalSearchLimits* limits,
+    LlevHybridCursor** out_cursor, uint32_t* out_reason);
+/** Complete the same threshold-expanding hybrid kNN rule as Rust under
+ * cumulative limits. Fail closed: no partial top-k on LIMIT_EXCEEDED. */
+LLEV_API LlevStatus llev_hybrid_index_query_knn(
+    const LlevHybridIndex* index, const double* query, size_t query_len,
+    size_t k, double initial_threshold,
+    const LlevTemporalSearchLimits* limits,
+    LlevHybridCursor** out_cursor, uint32_t* out_reason);
+/** Results carry exact MSM scores. Range pages arrive in source bucket
+ * order; kNN pages arrive in score order. Empty pages with out_done=0 must
+ * be resumed. LIMIT_EXCEEDED does not establish a complete candidate set. */
+LLEV_API LlevStatus llev_hybrid_cursor_next_batch(
+    LlevHybridCursor* cursor, LlevTemporalIndexMatch* out_matches,
+    size_t capacity, size_t page_work_units, size_t page_results,
+    size_t* out_len, uint8_t* out_done, uint32_t* out_reason);
+LLEV_API void llev_hybrid_cursor_free(LlevHybridCursor* cursor);
+
 /** Build, mutate, freeze, and release an index. Mutation requires exclusive
  * access. A frozen index may start independent concurrent cursors. A cursor
  * retains its immutable snapshot even after the index handle is freed. */

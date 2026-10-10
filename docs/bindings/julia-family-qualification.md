@@ -56,7 +56,7 @@ this qualification.
 | Vinary Tree Interop | retained resources; dictionary snapshots, visits, compact graphs, entries, and snapshot identity; scalar weighted finite-state transducers (WFSTs); lattice values | generate the complete ABI from the C header; qualify all value and unit-domain branches; add representative boundary benchmarks; complete topic-level docs, fresh-consumer installation, and registry staging |
 | llattice | host-implementable lattice interface; maximum/minimum, Boolean, optional, and finite-set lattices | add the native vector-content lattice; strengthen hostile-callback and concurrent lifecycle tests; compare pairwise and batched boundaries with native controls and budgets; complete package, documentation, and registry gates |
 | libdictenstein | Julia `AbstractDict`; dynamic DAWG, double-array trie, SCDawg, persistent ARTrie, and persistent vocabulary; snapshots; eager materialized algebra; retained dictionary-resource handoff | sorted-minimal DAWG, suffix automaton, and PathMap backends; persistent suffix structures and recovery controls; lazy zipper traversal and algebra; bidirectional traversal; Bloom filters and serialization; customer-implementable providers; generated ABI; full conformance, benchmarks, self-contained native artifacts, docs, and registry gates |
-| liblevenshtein | exact and bounded Levenshtein functions; standard, adjacent-transposition, full Damerau-Levenshtein, and merge-and-split automata over byte, Unicode-scalar, and unsigned-64-bit domains; bounded cursors/reducers; snapshots; a bounded TinyLFU/SIEVE result cache; parsed LLev/LLRE and compiled phonetic-pattern surfaces; Unicode distance-ranked, range-selected, and layer-scored queries; native contextual-cost, prefix-pruned, and pre-materialization value-filtered cursors with callback-backed bounded reductions | additional scalar distance kernels; affine, generalized, universal, FZF, and WallBreaker automata; complete cost, phonetic, temporal, and remaining specialized traversal families; serialization; configurable cache policies and eviction strategies; complete cross-domain conformance, performance, artifact, documentation, and registry gates |
+| liblevenshtein | exact and bounded Levenshtein functions; standard, adjacent-transposition, full Damerau-Levenshtein, and merge-and-split automata over byte, Unicode-scalar, and unsigned-64-bit domains; bounded cursors/reducers; snapshots; a bounded TinyLFU/SIEVE result cache; parsed LLev/LLRE and compiled phonetic-pattern surfaces; Unicode distance-ranked, range-selected, and layer-scored queries; native filtering cursors and temporal metric/index families, including advisory quantized and hybrid MSM candidates | additional scalar distance kernels; affine, generalized, universal, FZF, and WallBreaker automata; remaining cost, phonetic, and specialized traversal families; serialization; configurable cache policies and eviction strategies; complete cross-domain conformance, performance, artifact, documentation, and registry gates |
 | lling-llang | typed ABI validation and cancellation; eager scalar-WFST construction; immutable resource import; lazy composition; dynamic lattice and semiring consumption; semiring division, closure, numeric projections, and laws; customer-implementable scalar-WFST and semiring providers | built-in semiring domains; mutable, rational, synchronized, and generic-vocabulary WFSTs; core algorithms and path search; native lattice data and iteration; CFG/parsing; differentiable, pushdown/WPDS, symbolic, acoustic/ASR/CTC, correction, text-normalization, neural-transducer, and language-model decoder surfaces; remaining host-implementable interfaces; performance, artifact, documentation, and registry gates |
 | duallity | dictionary-resource bridge; four edit algorithms; Levenshtein plus basic universal, generalized, phonetic, and FZF selector-based WFST construction; product composition through lling-llang | WallBreaker; full phonetic rewrite/NFA pipeline; FZF configuration, statistics, scoring, and cache controls; detailed generalized/universal construction policies; representative benchmarks, self-contained artifacts, complete docs, and registry gates |
 
@@ -78,8 +78,8 @@ The earlier catalog had 65 rows, including catch-all entries such as
 `distance`, `algorithms`, `phonetic`, and `custom-provider`. Those entries could
 hide a missing native family behind one implemented method. The reconciled
 catalog contains 301 independently auditable capabilities and expands to 6,622
-project/language/capability cells. The Julia slice contains 109 existing but
-still unqualified surfaces, 186 reviewed missing surfaces, and the six reviewed
+project/language/capability cells. The current draft Julia slice contains 131
+existing but still unqualified surfaces, 164 reviewed missing surfaces, and the six reviewed
 distribution-only inapplicabilities below.
 
 | Owner | Capability count | Authoritative native surfaces reviewed |
@@ -92,9 +92,15 @@ distribution-only inapplicabilities below.
 | duallity | 15 | dictionary and state-source adapters; Levenshtein, universal, generalized, phonetic, WallBreaker, and FZF WFST families; product composition, scorer/configuration/cache controls, and resource handoff |
 | JavaScript distribution owners | 6 | native N-API, browser WebAssembly, WASI, shared resource-table/runtime identity, and the unscoped legacy package bridge |
 
-`knownMissingCapabilities` in the source model records the 186 Julia absences
+`knownMissingCapabilities` in the source model records the 164 Julia absences
 against this audit. An existing package directory therefore continues to mean
 only “inspect this surface”; it cannot overwrite a reviewed missing result.
+
+The 22 liblevenshtein filtering and temporal cells moved from `missing` to
+`audit-required` in [draft PR 35](https://github.com/vinary-tree/liblevenshtein-rust/pull/35).
+That draft has local native, C, and Julia evidence; its CI, fresh-consumer,
+regression-budget, topic-documentation, and release gates remain open. The
+reviewed `origin/master` commit table above predates this draft.
 
 ## Packaging, performance, and documentation findings
 
@@ -107,8 +113,9 @@ RC.6 preparation rule is therefore: prepare and test metadata locally, but do
 not publish or create a release tag.
 
 Benchmark maturity differs by package. Vinary Tree Interop and libdictenstein
-have no Julia benchmark. liblevenshtein times two scalar distance calls with
-warmup and repeated samples, but has no native control or regression budget.
+have no Julia benchmark. The liblevenshtein draft adds Julia and direct-C
+controls for quantized and hybrid temporal queries, but has no enforced
+regression budget across representative source sizes.
 llattice uses repeated samples for pairwise and batched folds, while
 lling-llang uses BenchmarkTools for composition and expansion. Duallity reports
 one aggregate constructor timing. These are useful smoke measurements, not yet

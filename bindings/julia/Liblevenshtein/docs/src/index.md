@@ -222,6 +222,52 @@ and never establishes complete candidate enumeration. `original_samples`
 copies one stored series while the cursor is open, including on its final
 nonempty page. Ordinary iteration and `reduce_batches!` close on exhaustion.
 
+### Hybrid MSM candidates
+
+`NativeHybridMsmIndex` wraps the Rust hybrid index, which first selects
+quantized byte-edit candidates, optionally prunes them, and computes exact
+move-split-merge (MSM) scores for the survivors. Its quantized candidate
+threshold scales the MSM cutoff by the configured multiplier and bin width.
+The default multiplier is 2.0. `lower_bound=:length` preserves all candidates
+that reach the MSM check; `:euclidean`, `:l1`, and `:combined` are prefix
+heuristics and can discard a true MSM neighbor. Quantization can also discard
+one. Complete iteration establishes completion of this configured pipeline,
+not full MSM recall or absence.
+
+```julia
+index = NativeHybridMsmIndex(quant_min=0, quant_max=10, quant_bins=16,
+    msm_cost=1.0, lower_bound=:length,
+    max_entries=100, max_total_samples=1600, max_series_len=16)
+insert!(index, 7, [1.0, 2.0, 3.0])
+freeze!(index)
+try
+    range = query_hybrid_msm_range(index, [1.0, 2.0, 3.0]; cutoff=1.0)
+    try
+        for match in range
+            @assert match.distance >= 0.0
+        end
+    finally
+        close(range)
+    end
+    nearest = query_hybrid_msm_knn(index, [1.0, 2.0, 3.0], 1)
+    try
+        @assert length(collect(nearest)) <= 1
+    finally
+        close(nearest)
+    end
+finally
+    close(index)
+end
+```
+
+The range cursor yields bounded pages in source bucket order. Empty pages
+must be resumed. The nearest-neighbor scan completes before returning its
+cursor, retains at most `k` scored results, and sorts those results by MSM
+score. Both cursors keep their frozen source after `close(index)`. Limits
+raise `TemporalQueryIncomplete`; nearest-neighbor exhaustion publishes no
+partial list. Use an exact `TemporalIndex(:msm)` query when a complete MSM
+range or top-k proof is needed.
+
 ### Physical-time TWED
 
 `TimestampedSeries` copies each nonempty finite value series and its strictly

@@ -22,7 +22,8 @@
         "tests/ffi_temporal_vector.rs",
         "tests/ffi_temporal_vector_bounds.rs",
         "tests/ffi_temporal_certificate.rs",
-        "tests/ffi_quantized_index.rs"
+        "tests/ffi_quantized_index.rs",
+        "tests/ffi_hybrid_index.rs"
       ],
       "enums": {
         "status": {
@@ -662,6 +663,30 @@
         },
         "llev_quantized_cursor_free": {
           "symbol": "llev_quantized_cursor_free"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": "llev_hybrid_index_new"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": "llev_hybrid_index_insert"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": "llev_hybrid_index_freeze"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": "llev_hybrid_index_free"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": "llev_hybrid_index_query_range"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": "llev_hybrid_index_query_knn"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": "llev_hybrid_cursor_next_batch"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": "llev_hybrid_cursor_free"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": "llev_temporal_index_cursor_next_batch"
@@ -1648,6 +1673,38 @@
         "llev_quantized_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -2684,6 +2741,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -3711,6 +3800,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -4731,6 +4852,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -5750,6 +5903,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -6766,6 +6951,38 @@
         "llev_quantized_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -7797,6 +8014,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -8823,6 +9072,38 @@
         "llev_quantized_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -9875,6 +10156,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -10896,6 +11209,38 @@
         "llev_quantized_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -11920,6 +12265,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -12942,6 +13319,38 @@
         "llev_quantized_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -13969,6 +14378,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -14995,6 +15436,38 @@
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
         },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -15231,7 +15704,8 @@
         "bindings/julia/Liblevenshtein/src/TemporalVectorOnline.jl",
         "bindings/julia/Liblevenshtein/src/TemporalVectorBounds.jl",
         "bindings/julia/Liblevenshtein/src/TemporalCertificate.jl",
-        "bindings/julia/Liblevenshtein/src/QuantizedIndex.jl"
+        "bindings/julia/Liblevenshtein/src/QuantizedIndex.jl",
+        "bindings/julia/Liblevenshtein/src/HybridIndex.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -15253,7 +15727,8 @@
         "bindings/julia/Liblevenshtein/test/temporal_vector_online.jl",
         "bindings/julia/Liblevenshtein/test/temporal_vector_bounds.jl",
         "bindings/julia/Liblevenshtein/test/temporal_certificate.jl",
-        "bindings/julia/Liblevenshtein/test/quantized_index.jl"
+        "bindings/julia/Liblevenshtein/test/quantized_index.jl",
+        "bindings/julia/Liblevenshtein/test/hybrid_index.jl"
       ],
       "enums": {
         "status": {
@@ -15938,6 +16413,30 @@
           "symbol": "original_samples"
         },
         "llev_quantized_cursor_free": {
+          "symbol": "close!"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": "NativeHybridMsmIndex"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": "insert!"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": "freeze!"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": "close!"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": "query_hybrid_msm_range"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": "query_hybrid_msm_knn"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": "next_batch!"
+        },
+        "llev_hybrid_cursor_free": {
           "symbol": "close!"
         },
         "llev_temporal_index_cursor_next_batch": {
@@ -16855,6 +17354,38 @@
         "llev_quantized_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-30 bounded quantized temporal candidates are not yet projected into this language facade"
+        },
+        "llev_hybrid_index_new": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_insert": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_freeze": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_range": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_index_query_knn": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_next_batch": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_hybrid_cursor_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,

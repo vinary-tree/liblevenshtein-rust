@@ -190,6 +190,11 @@ export ABI_VERSION,
     QuantizedMatch,
     query_quantized,
     original_samples,
+    NativeHybridMsmIndex,
+    HybridMsmCursor,
+    HybridMsmMatch,
+    query_hybrid_msm_range,
+    query_hybrid_msm_knn,
     TemporalCertificateLimits,
     TemporalCertificateInfo,
     TemporalCertificateEvidence,
@@ -1190,6 +1195,7 @@ include("TemporalQueries.jl")
 include("TemporalMsmPrefilter.jl")
 include("TemporalIndex.jl")
 include("QuantizedIndex.jl")
+include("HybridIndex.jl")
 include("TemporalCertificate.jl")
 include("TemporalApproxMsm.jl")
 include("TemporalMetricDomains.jl")

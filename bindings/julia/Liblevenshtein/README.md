@@ -211,6 +211,18 @@ work, result, DP-cell, scratch, and continuation ceilings raise
 `TemporalQueryIncomplete` on exhaustion. Use `next_batch!`,
 `reduce_batches!`, or ordinary iteration, and close an abandoned cursor.
 
+`NativeHybridMsmIndex` binds the Rust `HybridSearchIndex` pipeline: native
+quantized byte-edit filtering, optional bound or heuristic pruning, then exact
+MSM verification of surviving candidates. `query_hybrid_msm_range` streams
+verified scores in source bucket order with cumulative limits. The native
+`query_hybrid_msm_knn` scan follows the Rust threshold-expansion rule,
+retains at most `k` neighbors, fails closed on exhaustion, and returns a
+closeable result cursor sorted by score. `:length` is the safe MSM pruning
+bound; `:euclidean`, `:l1`, and `:combined` can miss true MSM matches.
+Quantization itself can miss them with any bound. Neither query proves full
+MSM recall or absence. See the
+[hybrid candidate guide](docs/src/index.md#hybrid-msm-candidates).
+
 `ApproxMsmIndex` copies finite episodes into a frozen PAA-ranked source and
 exactly reranks its bounded candidate pool with MSM. `query_approx_msm_knn`
 returns tagged `:exhaustive`, `:advisory`, or `:incomplete` evidence with
@@ -372,6 +384,7 @@ a copied temporal scan, the frozen temporal index, physical-time TWED range
 scan and index, exact physical-time nearest-neighbor scan and index,
 scalar, advisory, and exhaustive MSM nearest-neighbor searches,
 quantized byte-edit scalar and native candidate scans,
+hybrid MSM range and nearest-neighbor queries with direct C controls,
 source-filter scans, persistent native n-gram and hybrid queries, and their
 construction. Its fixed workload has 32 series of 16
 samples and 32 eight-byte terms. It first checks that the indexed and scanned
@@ -407,6 +420,8 @@ were:
 | 32-entry bounded native byte-edit candidates, radius 2 | 45,414 |
 | 32-entry byte-edit scalar candidate scan, radius 0 | 21,741 |
 | 32-entry bounded native exact byte lookup, radius 0 | 4,711 |
+| 32-entry hybrid MSM range, Julia / direct C | 389,788 / 387,771 |
+| 32-entry hybrid MSM kNN, Julia / direct C | 429,428 / 434,818 |
 | 32-entry scalar MSM kNN | 600,637 |
 | 32-entry advisory MSM kNN | 57,004 |
 | 32-entry exhaustive MSM kNN | 272,512 |
@@ -468,6 +483,9 @@ budget against a native control measured on the same runner.
 The 32-entry radius-2 byte-edit workload favors the scalar loop, whereas the
 native exact-key path avoids scanning other keys at radius zero. The native
 path also supplies snapshot ownership, cumulative limits, and bounded pages.
+The hybrid Julia and direct C controls have similar times on this source.
+Hybrid candidate filtering is advisory, so its kNN timing is not a like-for-like
+comparison with exact all-source MSM kNN.
 
 ## Common and intended usage
 
@@ -497,6 +515,11 @@ path also supplies snapshot ownership, cumulative limits, and bounded pages.
   filter. Set finite source ceilings at construction, then `freeze!` the index.
   Fetch full-precision values with `original_samples(cursor, id)` while the
   cursor is open and verify them with the intended temporal metric.
+- Use `query_hybrid_msm_range` when the Rust hybrid filter and exact MSM
+  verification are useful together. Use `query_hybrid_msm_knn` for its
+  threshold-expanding advisory nearest-neighbor rule. Use exact
+  `query_index_range` or `query_index_knn` when recall or absence must be
+  established.
 - Use `query_index_certified` when an exact indexed range result needs
   replayable K1–K4 evidence. Set `TemporalCertificateLimits` for cumulative
   traversal, witness, path, record, work, and result ceilings. Iterate

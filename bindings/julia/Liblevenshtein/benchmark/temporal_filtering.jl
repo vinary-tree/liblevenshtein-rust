@@ -45,6 +45,13 @@ for (id, samples) in pairs
     LL.insert!(quantized_index, id, samples)
 end
 LL.freeze!(quantized_index)
+hybrid_msm_index = LL.NativeHybridMsmIndex(quant_min=-4, quant_max=4,
+    quant_bins=16, msm_cost=1.0, max_entries=32,
+    max_total_samples=512, max_series_len=16)
+for (id, samples) in pairs
+    LL.insert!(hybrid_msm_index, id, samples)
+end
+LL.freeze!(hybrid_msm_index)
 quantized_config = LL.QuantizationConfig(-4.0, 4.0, 256)
 quantized_query = collect(LL.encode_u8(quantized_config, query))
 quantized_words = [(id, collect(LL.encode_u8(quantized_config, samples)))
@@ -106,6 +113,54 @@ quantized_candidates() = collect(LL.query_quantized(quantized_index,
     query, 2; page_work_units=100_000, page_results=32))
 quantized_exact() = collect(LL.query_quantized(quantized_index,
     query, 0; page_work_units=100_000, page_results=32))
+hybrid_msm_range() = collect(LL.query_hybrid_msm_range(
+    hybrid_msm_index, query; cutoff=1.0, page_work_units=100_000,
+    page_results=32))
+hybrid_msm_knn() = collect(LL.query_hybrid_msm_knn(
+    hybrid_msm_index, query, 3; initial_threshold=0.0,
+    page_work_units=100_000, page_results=3))
+function hybrid_msm_native_c(; nearest=false)
+    cursor = Ref{Ptr{Cvoid}}(C_NULL)
+    reason = Ref{UInt32}(0)
+    limits = Ref(LL.TemporalSearchLimits())
+    status = if nearest
+        GC.@preserve query ccall(
+            LL.native(:llev_hybrid_index_query_knn), Cint,
+            (Ptr{Cvoid}, Ptr{Float64}, Csize_t, Csize_t, Float64,
+                Ref{LL.TemporalSearchLimits}, Ref{Ptr{Cvoid}}, Ref{UInt32}),
+            hybrid_msm_index.handle, pointer(query), length(query),
+            3, 0.0, limits, cursor, reason)
+    else
+        GC.@preserve query ccall(
+            LL.native(:llev_hybrid_index_query_range), Cint,
+            (Ptr{Cvoid}, Ptr{Float64}, Csize_t, Float64,
+                Ref{LL.TemporalSearchLimits}, Ref{Ptr{Cvoid}}, Ref{UInt32}),
+            hybrid_msm_index.handle, pointer(query), length(query),
+            1.0, limits, cursor, reason)
+    end
+    status == 0 || error("direct C hybrid query construction failed")
+    matches = Tuple{UInt64, Float64}[]
+    try
+        done = Ref{UInt8}(0)
+        while done[] == 0
+            batch = Vector{LL.RawTemporalIndexMatch}(undef, 32)
+            written = Ref{Csize_t}(0)
+            status = GC.@preserve batch ccall(
+                LL.native(:llev_hybrid_cursor_next_batch), Cint,
+                (Ptr{Cvoid}, Ptr{LL.RawTemporalIndexMatch}, Csize_t,
+                    Csize_t, Csize_t, Ref{Csize_t}, Ref{UInt8}, Ref{UInt32}),
+                cursor[], pointer(batch), length(batch),
+                100_000, 32, written, done, reason)
+            status == 0 || error("direct C hybrid page failed")
+            append!(matches, ((batch[i].id, batch[i].distance)
+                for i in 1:Int(written[])))
+        end
+        matches
+    finally
+        ccall(LL.native(:llev_hybrid_cursor_free), Cvoid,
+            (Ptr{Cvoid},), cursor[])
+    end
+end
 function quantized_candidate_scan(threshold=2)
     matches = Tuple{UInt64, Int}[]
     for (id, word) in quantized_words
@@ -283,6 +338,17 @@ try
         for match in quantized_exact()]) ==
         sort(quantized_candidate_scan(0)) ||
         error("native exact quantized lookup differs from scalar byte scan")
+    sort([(match.id, match.distance) for match in hybrid_msm_range()]) ==
+        sort(hybrid_msm_native_c()) ||
+        error("Julia hybrid range differs from direct C control")
+    [(match.id, match.distance) for match in hybrid_msm_knn()] ==
+        hybrid_msm_native_c(nearest=true) ||
+        error("Julia hybrid kNN differs from direct C control")
+    pair_map = Dict(pairs)
+    all(match -> match.distance ==
+        LL.msm_distance(query, pair_map[match.id]).value,
+        hybrid_msm_range()) ||
+        error("hybrid emitted an inexact MSM score")
     [(match.id, match.distance) for match in indexed_knn()] ==
         [(item[2], item[3]) for item in indexed_knn_scan()] ||
         error("indexed exact kNN differs from scalar DTW scan")
@@ -355,6 +421,11 @@ try
     sample("32-entry byte edit native", quantized_candidates)
     sample("32-entry exact byte scalar", () -> quantized_candidate_scan(0))
     sample("32-entry exact byte native", quantized_exact)
+    sample("32-entry hybrid MSM range", hybrid_msm_range)
+    sample("32-entry hybrid range C", hybrid_msm_native_c)
+    sample("32-entry hybrid MSM kNN", hybrid_msm_knn)
+    sample("32-entry hybrid kNN C", () ->
+        hybrid_msm_native_c(nearest=true))
     sample("32-entry ERP scalar scan", erp_scalar_scan)
     sample("32-entry ERP generic index", erp_indexed)
     sample("32-entry ERP automaton", erp_automaton)
@@ -381,6 +452,7 @@ finally
     close(index)
     close(erp_index)
     close(quantized_index)
+    close(hybrid_msm_index)
     close(approx_advisory_index)
     close(approx_exhaustive_index)
     close(timestamped_index)

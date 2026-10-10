@@ -119,6 +119,14 @@ variants, protocols, or methods.
 | `llev_hamming_distance_threshold` | `llev_hamming_distance_threshold` | project ABI operation |
 | `llev_hamming_distance_u64` | `llev_hamming_distance_u64` | project ABI operation |
 | `llev_hamming_distance_u64_threshold` | `llev_hamming_distance_u64_threshold` | project ABI operation |
+| `llev_hybrid_cursor_free` | `llev_hybrid_cursor_free` | project ABI operation |
+| `llev_hybrid_cursor_next_batch` | `llev_hybrid_cursor_next_batch` | project ABI operation |
+| `llev_hybrid_index_free` | `llev_hybrid_index_free` | project ABI operation |
+| `llev_hybrid_index_freeze` | `llev_hybrid_index_freeze` | project ABI operation |
+| `llev_hybrid_index_insert` | `llev_hybrid_index_insert` | project ABI operation |
+| `llev_hybrid_index_new` | `llev_hybrid_index_new` | project ABI operation |
+| `llev_hybrid_index_query_knn` | `llev_hybrid_index_query_knn` | project ABI operation |
+| `llev_hybrid_index_query_range` | `llev_hybrid_index_query_range` | project ABI operation |
 | `llev_indel_distance` | `llev_indel_distance` | project ABI operation |
 | `llev_indel_distance_bytes` | `llev_indel_distance_bytes` | project ABI operation |
 | `llev_indel_distance_bytes_threshold` | `llev_indel_distance_bytes_threshold` | project ABI operation |
