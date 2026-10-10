@@ -1167,13 +1167,13 @@ jobs:
           - name: FreeBSD 15.1 x86_64
             os: freebsd
             version: "15.1"
-            install: sudo pkg install -y rust
+            install: sudo pkg install -y rust protobuf
             native_rust_at_msrv: true
             experimental: false
           - name: NetBSD 10.1 x86_64
             os: netbsd
             version: "10.1"
-            install: sudo pkgin -y install rust
+            install: sudo pkgin -y install rust protobuf
             native_rust_at_msrv: true
             experimental: false
           - name: OpenBSD 7.9 x86_64

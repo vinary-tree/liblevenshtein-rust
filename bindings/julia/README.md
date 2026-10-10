@@ -692,6 +692,9 @@ variants, protocols, or methods.
 | `clear!` | `llev_query_cache_clear` | project ABI operation |
 | `close!` | `llev_transducer_free`, `llev_query_cache_free`, `llev_cost_cursor_free`, `llev_specialized_cursor_free`, `llev_query_cursor_free`, `llev_phonetic_pattern_free`, `llev_phonetic_rules_free`, `llev_phonetic_grep_free`, `llev_phonetic_dictionary_free`, `llev_phonetic_online_free`, `llev_phonetic_online_stream_free`, `llev_phonetic_token_free`, `llev_phonetic_transducer_free`, `llev_generalized_automaton_free`, `llev_generalized_online_free`, `llev_universal_automaton_free`, `llev_universal_online_free`, `llev_wallbreaker_free`, `llev_wallbreaker_cursor_free`, `llev_timestamped_twed_index_free`, `llev_timestamped_twed_cursor_free`, `llev_keogh_plan_free`, `llev_temporal_index_free`, `llev_quantized_index_free`, `llev_quantized_cursor_free`, `llev_hybrid_index_free`, `llev_hybrid_cursor_free`, `llev_temporal_index_cursor_free`, `llev_temporal_knn_cursor_free`, `llev_temporal_certificate_free`, `llev_temporal_online_free`, `llev_source_filter_index_free`, `llev_approx_msm_index_free`, `llev_temporal_alignment_free`, `llev_vector_metric_free`, `llev_vector_frechet_online_free` | transducer lifecycle, snapshot, or domain metadata; project ABI operation; streaming result traversal and batch leases; compiled phonetic-pattern lifecycle and matching; phonetic rule-set lifecycle and rewriting; word-boundary phonetic search and configuration; normalized phonetic dictionary construction, query, and updates; character-level phonetic search and scanner lifecycle; token-sequence phonetic matching and detail ownership; incremental phonetic rewriting and lifecycle; runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
 | `compiled_phonetic_bytes` | `llev_owned_bytes_free`, `llev_phonetic_rules_to_bytes`, `llev_phonetic_pattern_to_bytes` | versioned compiled-byte ownership; versioned compiled phonetic-rule bytes; versioned compiled phonetic-pattern bytes |
+| `dictionary_bytes` | `llev_dictionary_serialize` | project ABI operation |
+| `dictionary_terms` | `llev_dictionary_deserialize` | project ABI operation |
+| `DictionaryTerms` | `llev_decoded_dictionary_terms_len`, `llev_decoded_dictionary_term_at`, `llev_decoded_dictionary_terms_free` | project ABI operation |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
 | `distance_config` | `llev_phonetic_grep_distance_config` | word-boundary phonetic search and configuration |
 | `erp_gap_mass_lower_bound` | `llev_temporal_lower_bound` | project ABI operation |
@@ -738,6 +741,9 @@ variants, protocols, or methods.
 | `normalized_query` | `llev_phonetic_online_normalized_query` | character-level phonetic search and scanner lifecycle |
 | `observation` | `llev_generalized_online_observation`, `llev_universal_online_observation`, `llev_temporal_online_observation`, `llev_vector_frechet_online_observation` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation; project ABI operation |
 | `online` | `llev_generalized_online_new_utf8`, `llev_universal_online_new` | runtime generalized-automaton lifecycle and prefix evaluation; universal-automaton lifecycle, policies, and prefix evaluation |
+| `operation_set_bytes` | `llev_operation_set_serialize`, `llev_decoded_operation_set_serialize` | project ABI operation |
+| `operation_set_snapshot` | `llev_operation_set_deserialize` | project ABI operation |
+| `OperationSetSnapshot` | `llev_decoded_operation_set_len`, `llev_decoded_operation_set_free` | project ABI operation |
 | `optimal_string_alignment_distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold`, `llev_damerau_distance_bytes`, `llev_damerau_distance_bytes_threshold`, `llev_damerau_distance_u64`, `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
 | `original_samples` | `llev_quantized_cursor_original` | project ABI operation |
 | `pattern_pieces` | `llev_wallbreaker_split_utf8` | project ABI operation |
@@ -779,10 +785,14 @@ variants, protocols, or methods.
 | `scan_line` | `llev_phonetic_grep_scan_line` | word-boundary phonetic search and configuration |
 | `scan_text` | `llev_phonetic_grep_scan_text` | word-boundary phonetic search and configuration |
 | `scratch_bytes` | `llev_temporal_online_scratch_bytes`, `llev_vector_frechet_online_scratch_bytes` | project ABI operation |
+| `SerializedByteRestriction` | `llev_decoded_operation_set_restriction_at` | project ABI operation |
+| `SerializedOperation` | `llev_decoded_operation_set_operation_at` | project ABI operation |
 | `similar_phonetic_chars` | `llev_phonetic_similar_chars` | IPA feature classification and relations |
 | `snapshot` | `llev_transducer_snapshot` | transducer lifecycle, snapshot, or domain metadata |
 | `soft_dtw_gradient` | `llev_soft_dtw_gradient` | project ABI operation |
 | `streaming` | `llev_phonetic_online_stream_new` | character-level phonetic search and scanner lifecycle |
+| `suffix_source_bytes` | `llev_suffix_source_serialize` | project ABI operation |
+| `suffix_source_texts` | `llev_suffix_source_deserialize` | project ABI operation |
 | `syllable_boundaries` | `llev_phonetic_syllable_boundaries` | syllable count and boundary heuristics |
 | `syllable_count` | `llev_phonetic_syllable_count` | syllable count and boundary heuristics |
 | `temporal_alignment` | `llev_temporal_alignment_new` | project ABI operation |
@@ -797,6 +807,9 @@ variants, protocols, or methods.
 | `twed_length_lower_bound` | `llev_twed_length_lower_bound` | project ABI operation |
 | `unit_domain` | `llev_transducer_unit_domain` | transducer lifecycle, snapshot, or domain metadata |
 | `UniversalAutomaton` | `llev_universal_automaton_new` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `valued_dictionary_bytes` | `llev_valued_dictionary_serialize` | project ABI operation |
+| `valued_dictionary_entries` | `llev_valued_dictionary_deserialize` | project ABI operation |
+| `ValuedDictionaryEntries` | `llev_decoded_value_entries_len`, `llev_decoded_value_entry_at`, `llev_decoded_value_entries_free` | project ABI operation |
 | `vector_box_box_lower_bound` | `llev_vector_box_box_lower_bound` | project ABI operation |
 | `vector_candidate_lower_bound` | `llev_vector_temporal_candidate_lower_bound` | project ABI operation |
 | `vector_frechet_ground_distance` | `llev_vector_frechet_ground_distance` | project ABI operation |

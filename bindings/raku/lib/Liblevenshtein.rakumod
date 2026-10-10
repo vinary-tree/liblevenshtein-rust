@@ -14,6 +14,12 @@ our constant BUILD-FEATURE-CORE is export =
     Liblevenshtein::GeneratedAbi::BUILD-FEATURE-CORE;
 our constant BUILD-FEATURE-PHONETIC is export =
     Liblevenshtein::GeneratedAbi::BUILD-FEATURE-PHONETIC;
+our constant BUILD-FEATURE-SERIALIZATION is export =
+    Liblevenshtein::GeneratedAbi::BUILD-FEATURE-SERIALIZATION;
+our constant BUILD-FEATURE-PROTOBUF is export =
+    Liblevenshtein::GeneratedAbi::BUILD-FEATURE-PROTOBUF;
+our constant BUILD-FEATURE-COMPRESSION is export =
+    Liblevenshtein::GeneratedAbi::BUILD-FEATURE-COMPRESSION;
 
 our constant Status is export = Liblevenshtein::GeneratedAbi::Status;
 our constant OK is export = Liblevenshtein::GeneratedAbi::OK;

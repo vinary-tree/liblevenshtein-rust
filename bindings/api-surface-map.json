@@ -1,5 +1,5 @@
 {
-  "$comment": "Per-language facade surface model for the 239 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
+  "$comment": "Per-language facade surface model for the 275 modeled C functions in bindings/api.json. scripts/check-bindings.py validates every claim against facade sources and regenerates bindings/conformance/completeness-matrix.tsv. A null symbol is a deliberate modeled absence and must carry _reason; reasons prefixed with FINDING flag real cross-facade inconsistencies loudly without breaking the gate.",
   "modelVersion": 1,
   "languages": {
     "c": {
@@ -23,7 +23,11 @@
         "tests/ffi_temporal_vector_bounds.rs",
         "tests/ffi_temporal_certificate.rs",
         "tests/ffi_quantized_index.rs",
-        "tests/ffi_hybrid_index.rs"
+        "tests/ffi_hybrid_index.rs",
+        "tests/ffi_dictionary_binary.rs",
+        "tests/ffi_suffix_binary.rs",
+        "tests/ffi_operation_set_binary.rs",
+        "tests/ffi_dictionary_values.rs"
       ],
       "enums": {
         "status": {
@@ -687,6 +691,63 @@
         },
         "llev_hybrid_cursor_free": {
           "symbol": "llev_hybrid_cursor_free"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": "llev_dictionary_serialize"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": "llev_dictionary_deserialize"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": "llev_suffix_source_serialize"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": "llev_suffix_source_deserialize"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": "llev_operation_set_serialize"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": "llev_operation_set_deserialize"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": "llev_decoded_operation_set_serialize"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": "llev_decoded_operation_set_len"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": "llev_decoded_operation_set_operation_at"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": "llev_decoded_operation_set_restriction_at"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": "llev_decoded_operation_set_free"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": "llev_decoded_dictionary_terms_len"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": "llev_decoded_dictionary_term_at"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": "llev_decoded_dictionary_terms_free"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": "llev_valued_dictionary_serialize"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": "llev_valued_dictionary_deserialize"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": "llev_decoded_value_entries_len"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": "llev_decoded_value_entry_at"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": "llev_decoded_value_entries_free"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": "llev_temporal_index_cursor_next_batch"
@@ -1705,6 +1766,82 @@
         "llev_hybrid_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -2773,6 +2910,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -3832,6 +4045,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -4884,6 +5173,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -5935,6 +6300,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -6983,6 +7424,82 @@
         "llev_hybrid_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -8046,6 +8563,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -9104,6 +9697,82 @@
         "llev_hybrid_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -10188,6 +10857,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -11241,6 +11986,82 @@
         "llev_hybrid_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -12297,6 +13118,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -13351,6 +14248,82 @@
         "llev_hybrid_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
@@ -14410,6 +15383,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -15468,6 +16517,82 @@
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
         },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,
           "_reason": "FINDING: revision-12 native indexed temporal query is not yet projected into this language facade"
@@ -15705,7 +16830,11 @@
         "bindings/julia/Liblevenshtein/src/TemporalVectorBounds.jl",
         "bindings/julia/Liblevenshtein/src/TemporalCertificate.jl",
         "bindings/julia/Liblevenshtein/src/QuantizedIndex.jl",
-        "bindings/julia/Liblevenshtein/src/HybridIndex.jl"
+        "bindings/julia/Liblevenshtein/src/HybridIndex.jl",
+        "bindings/julia/Liblevenshtein/src/DictionarySerialization.jl",
+        "bindings/julia/Liblevenshtein/src/SuffixSerialization.jl",
+        "bindings/julia/Liblevenshtein/src/OperationSetSerialization.jl",
+        "bindings/julia/Liblevenshtein/src/DictionaryValueSerialization.jl"
       ],
       "readme": "bindings/julia/README.md",
       "tests": [
@@ -15728,7 +16857,12 @@
         "bindings/julia/Liblevenshtein/test/temporal_vector_bounds.jl",
         "bindings/julia/Liblevenshtein/test/temporal_certificate.jl",
         "bindings/julia/Liblevenshtein/test/quantized_index.jl",
-        "bindings/julia/Liblevenshtein/test/hybrid_index.jl"
+        "bindings/julia/Liblevenshtein/test/hybrid_index.jl",
+        "bindings/julia/Liblevenshtein/test/dictionary_bincode.jl",
+        "bindings/julia/Liblevenshtein/test/suffix_serialization.jl",
+        "bindings/julia/Liblevenshtein/test/operation_set_serialization.jl",
+        "bindings/julia/Liblevenshtein/test/serialization_rc5.jl",
+        "bindings/julia/Liblevenshtein/test/dictionary_values.jl"
       ],
       "enums": {
         "status": {
@@ -16438,6 +17572,63 @@
         },
         "llev_hybrid_cursor_free": {
           "symbol": "close!"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": "dictionary_bytes"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": "dictionary_terms"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": "suffix_source_bytes"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": "suffix_source_texts"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": "operation_set_bytes"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": "operation_set_snapshot"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": "operation_set_bytes"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": "OperationSetSnapshot"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": "SerializedOperation"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": "SerializedByteRestriction"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": "OperationSetSnapshot"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": "DictionaryTerms"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": "DictionaryTerms"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": "DictionaryTerms"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": "valued_dictionary_bytes"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": "valued_dictionary_entries"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": "ValuedDictionaryEntries"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": "ValuedDictionaryEntries"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": "ValuedDictionaryEntries"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": "next_batch!"
@@ -17386,6 +18577,82 @@
         "llev_hybrid_cursor_free": {
           "symbol": null,
           "_reason": "FINDING: revision-31 hybrid temporal candidate MSM query is not yet projected into this language facade"
+        },
+        "llev_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_suffix_source_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native suffix source persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_operation_set_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_operation_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_restriction_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_operation_set_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native operation-set persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_term_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_decoded_dictionary_terms_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-32 native dictionary binary persistence is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_serialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_valued_dictionary_deserialize": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_len": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entry_at": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
+        },
+        "llev_decoded_value_entries_free": {
+          "symbol": null,
+          "_reason": "FINDING: revision-33 native valued Bincode is not yet projected into this language facade"
         },
         "llev_temporal_index_cursor_next_batch": {
           "symbol": null,

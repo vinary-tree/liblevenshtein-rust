@@ -931,6 +931,173 @@ LLEV_API LlevStatus llev_phonetic_pattern_from_bytes(
 /** Release and clear an exact owned AOT byte buffer. NULL is a no-op. */
 LLEV_API void llev_owned_bytes_free(LlevOwnedBytes* value);
 
+/** Borrowed UTF-8 term bytes; an empty term may have a NULL data pointer. */
+typedef struct LlevUtf8Slice {
+    const uint8_t* data;
+    size_t len;
+} LlevUtf8Slice;
+
+/** Caller-selected ceilings for native dictionary binary input and output. */
+typedef struct LlevDictionaryLimits {
+    size_t max_terms;
+    size_t max_term_bytes;
+    size_t max_total_term_bytes;
+    size_t max_payload_bytes;
+} LlevDictionaryLimits;
+
+typedef struct LlevDecodedDictionaryTerms LlevDecodedDictionaryTerms;
+
+/** Binary format IDs; each identifies a format family and wire revision. */
+#define LLEV_DICTIONARY_FORMAT_BINCODE_V1 UINT32_C(1)
+#define LLEV_DICTIONARY_FORMAT_PROTOBUF_V1 UINT32_C(2)
+#define LLEV_DICTIONARY_FORMAT_PROTOBUF_V2 UINT32_C(3)
+#define LLEV_DICTIONARY_FORMAT_GZIP_BINCODE_V1 UINT32_C(4)
+#define LLEV_DICTIONARY_FORMAT_GZIP_PROTOBUF_V1 UINT32_C(5)
+#define LLEV_DICTIONARY_FORMAT_GZIP_PROTOBUF_V2 UINT32_C(6)
+#define LLEV_DICTIONARY_FORMAT_PROTOBUF_DAT_V1 UINT32_C(7)
+
+/** Encode the accepted byte-dictionary terms with the selected native format.
+ * The input terms are copied for this call; release output through
+ * llev_owned_bytes_free. Unsupported compiled features return UNSUPPORTED. */
+LLEV_API LlevStatus llev_dictionary_serialize(
+    uint32_t format_id, const LlevUtf8Slice* terms, size_t term_count,
+    const LlevDictionaryLimits* limits, LlevOwnedBytes* out_bytes);
+
+/** Decode one complete native dictionary payload. A bounded format-specific
+ * preflight validates counts, UTF-8 and payload boundaries before the native
+ * dictionary decoder allocates. */
+LLEV_API LlevStatus llev_dictionary_deserialize(
+    uint32_t format_id, const uint8_t* data, size_t len,
+    const LlevDictionaryLimits* limits,
+    LlevDecodedDictionaryTerms** out_terms);
+
+/** Suffix formats preserve indexed source texts, not enumerated substrings. */
+#define LLEV_SUFFIX_FORMAT_BINCODE_V1 UINT32_C(1)
+#define LLEV_SUFFIX_FORMAT_PROTOBUF_V1 UINT32_C(2)
+typedef LlevDecodedDictionaryTerms LlevDecodedSourceTexts;
+LLEV_API LlevStatus llev_suffix_source_serialize(
+    uint32_t format_id, const LlevUtf8Slice* texts, size_t text_count,
+    const LlevDictionaryLimits* limits, LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_suffix_source_deserialize(
+    uint32_t format_id, const uint8_t* data, size_t len,
+    const LlevDictionaryLimits* limits, LlevDecodedSourceTexts** out_texts);
+
+/** Inspect an immutable decoded term snapshot. Views remain valid until free. */
+LLEV_API LlevStatus llev_decoded_dictionary_terms_len(
+    const LlevDecodedDictionaryTerms* terms, size_t* out_len);
+LLEV_API LlevStatus llev_decoded_dictionary_term_at(
+    const LlevDecodedDictionaryTerms* terms, size_t index,
+    LlevUtf8Slice* out_term);
+LLEV_API void llev_decoded_dictionary_terms_free(LlevDecodedDictionaryTerms* terms);
+
+/** Value-preserving Bincode uses `Vec<(String, u64)>` or
+ * `Vec<(String, Vec<uint8_t>)>`; retain the value kind with the bytes. */
+#define LLEV_VALUE_PERSIST_U64 UINT32_C(1)
+#define LLEV_VALUE_PERSIST_BYTES UINT32_C(2)
+typedef struct LlevValueEntryInput {
+    const uint8_t* term_data;
+    size_t term_len;
+    const uint8_t* value_data;
+    size_t value_len;
+    uint64_t value_u64;
+} LlevValueEntryInput;
+typedef struct LlevValueLimits {
+    size_t max_entries;
+    size_t max_term_bytes;
+    size_t max_total_term_bytes;
+    size_t max_value_bytes;
+    size_t max_total_value_bytes;
+    size_t max_payload_bytes;
+} LlevValueLimits;
+typedef struct LlevValueEntryView {
+    const uint8_t* term_data;
+    size_t term_len;
+    const uint8_t* value_data;
+    size_t value_len;
+    uint64_t value_u64;
+    uint32_t value_kind;
+    uint32_t reserved;
+} LlevValueEntryView;
+typedef struct LlevDecodedValueEntries LlevDecodedValueEntries;
+/** The unit domain is VT_UNIT_DOMAIN_BYTE or VT_UNIT_DOMAIN_UNICODE_SCALAR.
+ * The value kind is LLEV_VALUE_PERSIST_U64 or LLEV_VALUE_PERSIST_BYTES.
+ * Unsupported or malformed input never publishes an output. */
+LLEV_API LlevStatus llev_valued_dictionary_serialize(
+    uint32_t unit_domain, uint32_t value_kind,
+    const LlevValueEntryInput* entries, size_t entry_count,
+    const LlevValueLimits* limits, LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_valued_dictionary_deserialize(
+    uint32_t unit_domain, uint32_t value_kind, const uint8_t* data, size_t len,
+    const LlevValueLimits* limits, LlevDecodedValueEntries** out_entries);
+/** Borrowed views expire when the decoded snapshot is freed. */
+LLEV_API LlevStatus llev_decoded_value_entries_len(
+    const LlevDecodedValueEntries* entries, size_t* out_len);
+LLEV_API LlevStatus llev_decoded_value_entry_at(
+    const LlevDecodedValueEntries* entries, size_t index,
+    LlevValueEntryView* out_view);
+LLEV_API void llev_decoded_value_entries_free(LlevDecodedValueEntries* entries);
+
+/** Native generalized-operation persistence formats and caller limits. */
+#define LLEV_OPERATION_SET_FORMAT_BINARY_V1 UINT32_C(1)
+#define LLEV_OPERATION_SET_FORMAT_PROTOBUF_V1 UINT32_C(2)
+#define LLEV_OPERATION_SET_FORMAT_GZIP_BINARY_V1 UINT32_C(3)
+#define LLEV_OPERATION_SET_FORMAT_GZIP_PROTOBUF_V1 UINT32_C(4)
+typedef struct LlevOperationSetLimits {
+    size_t max_payload_bytes;
+    size_t max_operations;
+    size_t max_operation_name_bytes;
+    size_t max_restriction_pairs_per_operation;
+    size_t max_total_restriction_pairs;
+    size_t max_restriction_text_bytes;
+} LlevOperationSetLimits;
+
+typedef struct LlevDecodedOperationSet LlevDecodedOperationSet;
+/** Borrowed operation metadata, valid until the decoded set is freed. */
+typedef struct LlevSerializedOperationView {
+    size_t consume_source;
+    size_t consume_target;
+    double weight;
+    const uint8_t* name_data;
+    size_t name_len;
+    uint32_t applicability;
+    size_t restriction_count;
+} LlevSerializedOperationView;
+/** Kind 1 preserves raw bytes; kind 2 borrows UTF-8 source/target strings. */
+typedef struct LlevSerializedRestrictionView {
+    uint32_t kind;
+    uint8_t source_byte;
+    uint8_t target_byte;
+    uint8_t reserved[2];
+    const uint8_t* source_data;
+    size_t source_len;
+    const uint8_t* target_data;
+    size_t target_len;
+} LlevSerializedRestrictionView;
+
+/** Encode operation descriptors with one native versioned codec. */
+LLEV_API LlevStatus llev_operation_set_serialize(
+    uint32_t format_id, const LlevGeneralizedOperation* operations,
+    size_t operation_count, const LlevOperationSetLimits* limits,
+    LlevOwnedBytes* out_bytes);
+/** Decode one complete payload into an independently owned native set. */
+LLEV_API LlevStatus llev_operation_set_deserialize(
+    uint32_t format_id, const uint8_t* data, size_t len,
+    const LlevOperationSetLimits* limits, LlevDecodedOperationSet** out_set);
+/** Re-encode a decoded set while retaining raw-byte restriction pairs. */
+LLEV_API LlevStatus llev_decoded_operation_set_serialize(
+    const LlevDecodedOperationSet* set, uint32_t format_id,
+    const LlevOperationSetLimits* limits, LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_decoded_operation_set_len(
+    const LlevDecodedOperationSet* set, size_t* out_len);
+LLEV_API LlevStatus llev_decoded_operation_set_operation_at(
+    const LlevDecodedOperationSet* set, size_t index,
+    LlevSerializedOperationView* out_view);
+LLEV_API LlevStatus llev_decoded_operation_set_restriction_at(
+    const LlevDecodedOperationSet* set, size_t operation_index,
+    size_t restriction_index, LlevSerializedRestrictionView* out_view);
+/** Free the decoded set; borrowed views become invalid. NULL is a no-op. */
+LLEV_API void llev_decoded_operation_set_free(LlevDecodedOperationSet* set);
+
 /** Dimension costs for native articulatory distance. Every field must be
  * finite and nonnegative. NULL selects Rust's FeatureDistanceWeights::standard.
  * The layout is seven consecutive IEEE-754 binary64 values. */

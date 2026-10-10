@@ -313,7 +313,7 @@ fn map_generalized(error: GeneralizedAutomatonError) -> (LlevStatus, String) {
     }
 }
 
-unsafe fn parse_operation_set(
+pub(super) unsafe fn parse_operation_set(
     operations: *const LlevGeneralizedOperation,
     operation_count: usize,
 ) -> Result<OperationSet, (LlevStatus, String)> {

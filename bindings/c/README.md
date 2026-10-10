@@ -100,6 +100,19 @@ variants, protocols, or methods.
 | `llev_damerau_distance_threshold` | `llev_damerau_distance_threshold` | standalone exact or thresholded distance |
 | `llev_damerau_distance_u64` | `llev_damerau_distance_u64` | standalone exact or thresholded distance |
 | `llev_damerau_distance_u64_threshold` | `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
+| `llev_decoded_dictionary_term_at` | `llev_decoded_dictionary_term_at` | project ABI operation |
+| `llev_decoded_dictionary_terms_free` | `llev_decoded_dictionary_terms_free` | project ABI operation |
+| `llev_decoded_dictionary_terms_len` | `llev_decoded_dictionary_terms_len` | project ABI operation |
+| `llev_decoded_operation_set_free` | `llev_decoded_operation_set_free` | project ABI operation |
+| `llev_decoded_operation_set_len` | `llev_decoded_operation_set_len` | project ABI operation |
+| `llev_decoded_operation_set_operation_at` | `llev_decoded_operation_set_operation_at` | project ABI operation |
+| `llev_decoded_operation_set_restriction_at` | `llev_decoded_operation_set_restriction_at` | project ABI operation |
+| `llev_decoded_operation_set_serialize` | `llev_decoded_operation_set_serialize` | project ABI operation |
+| `llev_decoded_value_entries_free` | `llev_decoded_value_entries_free` | project ABI operation |
+| `llev_decoded_value_entries_len` | `llev_decoded_value_entries_len` | project ABI operation |
+| `llev_decoded_value_entry_at` | `llev_decoded_value_entry_at` | project ABI operation |
+| `llev_dictionary_deserialize` | `llev_dictionary_deserialize` | project ABI operation |
+| `llev_dictionary_serialize` | `llev_dictionary_serialize` | project ABI operation |
 | `llev_distance` | `llev_distance` | standalone exact or thresholded distance |
 | `llev_distance_bytes` | `llev_distance_bytes` | standalone exact or thresholded distance |
 | `llev_distance_bytes_threshold` | `llev_distance_bytes_threshold` | standalone exact or thresholded distance |
@@ -147,6 +160,8 @@ variants, protocols, or methods.
 | `llev_merge_and_split_distance_u64_threshold` | `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
 | `llev_operation_costs_preset` | `llev_operation_costs_preset` | project ABI operation |
 | `llev_operation_costs_validate` | `llev_operation_costs_validate` | project ABI operation |
+| `llev_operation_set_deserialize` | `llev_operation_set_deserialize` | project ABI operation |
+| `llev_operation_set_serialize` | `llev_operation_set_serialize` | project ABI operation |
 | `llev_owned_bytes_free` | `llev_owned_bytes_free` | versioned compiled-byte ownership |
 | `llev_owned_string_free` | `llev_owned_string_free` | owned result-string release |
 | `llev_phonetic_articulatory_distance` | `llev_phonetic_articulatory_distance` | articulatory phonetic distance |
@@ -242,6 +257,8 @@ variants, protocols, or methods.
 | `llev_string_array_free` | `llev_string_array_free` | legacy owned-string plumbing |
 | `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |
+| `llev_suffix_source_deserialize` | `llev_suffix_source_deserialize` | project ABI operation |
+| `llev_suffix_source_serialize` | `llev_suffix_source_serialize` | project ABI operation |
 | `llev_temporal_alignment_free` | `llev_temporal_alignment_free` | project ABI operation |
 | `llev_temporal_alignment_new` | `llev_temporal_alignment_new` | project ABI operation |
 | `llev_temporal_alignment_page` | `llev_temporal_alignment_page` | project ABI operation |
@@ -309,6 +326,8 @@ variants, protocols, or methods.
 | `llev_universal_online_free` | `llev_universal_online_free` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_new` | `llev_universal_online_new` | universal-automaton lifecycle, policies, and prefix evaluation |
 | `llev_universal_online_observation` | `llev_universal_online_observation` | universal-automaton lifecycle, policies, and prefix evaluation |
+| `llev_valued_dictionary_deserialize` | `llev_valued_dictionary_deserialize` | project ABI operation |
+| `llev_valued_dictionary_serialize` | `llev_valued_dictionary_serialize` | project ABI operation |
 | `llev_vector_box_box_lower_bound` | `llev_vector_box_box_lower_bound` | project ABI operation |
 | `llev_vector_frechet_ground_distance` | `llev_vector_frechet_ground_distance` | project ABI operation |
 | `llev_vector_frechet_ground_online_new` | `llev_vector_frechet_ground_online_new` | project ABI operation |

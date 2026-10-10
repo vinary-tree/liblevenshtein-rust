@@ -307,6 +307,8 @@ bindings/julia/Liblevenshtein/README.md
 bindings/julia/Liblevenshtein/docs/src/index.md
 bindings/julia/Liblevenshtein/docs/src/phonetic.md
 bindings/julia/Liblevenshtein/docs/src/reference.md
+bindings/julia/Liblevenshtein/docs/src/serialization.md
+bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/README.md
 bindings/julia/README.md
 bindings/raku/README.md
 bindings/raku/benchmark/README.md

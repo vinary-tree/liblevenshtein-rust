@@ -1278,6 +1278,88 @@ provides worked examples while using these same native functions.
 
 ---
 
+## 8B. Bounded dictionary and suffix persistence
+
+API revision 32 adds native binary-format operations behind
+`LLEV_BUILD_FEATURE_SERIALIZATION`. `llev_dictionary_serialize`
+accepts borrowed `LlevUtf8Slice` terms, constructs the native byte-domain
+dictionary language, and returns a `LlevOwnedBytes` buffer released through
+`llev_owned_bytes_free`. `llev_dictionary_deserialize` accepts one
+complete binary payload and returns an independent, immutable
+`LlevDecodedDictionaryTerms` snapshot. Read its length and borrowed term views
+with `llev_decoded_dictionary_terms_len` and
+`llev_decoded_dictionary_term_at`; the views expire when
+`llev_decoded_dictionary_terms_free` releases the snapshot. The source bytes may
+be released immediately after a successful decode.
+
+The format ID selects the serializer and its wire revision:
+
+| Format ID | Native serializer | Feature gate | Compatibility role |
+|---|---|---|---|
+| `BINCODE_V1` = 1 | `BincodeSerializer` | Serialization | Fixed-integer, little-endian Rust format. |
+| `PROTOBUF_V1` = 2 | `ProtobufSerializer` | Protobuf | Portable V1 graph interchange. |
+| `PROTOBUF_V2` = 3 | `OptimizedProtobufSerializer` | Protobuf | Compact native V2 graph. |
+| `GZIP_BINCODE_V1` = 4 | `GzipSerializer<BincodeSerializer>` | Compression | Gzip over bincode V1. |
+| `GZIP_PROTOBUF_V1` = 5 | `GzipSerializer<ProtobufSerializer>` | Protobuf and compression | Gzip over portable V1. |
+| `GZIP_PROTOBUF_V2` = 6 | `GzipSerializer<OptimizedProtobufSerializer>` | Protobuf and compression | Gzip over compact V2. |
+| `PROTOBUF_DAT_V1` = 7 | `DatProtobufSerializer` | Protobuf | DAT-specific `LDT1` term payload. |
+
+Unknown format IDs return `INVALID_ARGUMENT`; a recognized format whose
+feature was omitted returns `UNSUPPORTED`. This path preserves the accepted UTF-8 term language,
+including an empty term, but not dictionary values or the in-memory backend.
+The resulting bytes match the selected native serializer's output for the same
+accepted term set. V2 and DAT are not promised to be readable by V1-only
+consumers. Callers persist the independently owned bytes with their usual file
+or object-store operations.
+
+`llev_suffix_source_serialize` and `llev_suffix_source_deserialize` select
+suffix-automaton Bincode V1 or Protobuf V1 with format IDs 1 and 2. They
+preserve the ordered indexed source texts, including duplicates. They do not
+enumerate the accepted substring language. The decoder publishes the same
+owned string-snapshot handle, typed as `LlevDecodedSourceTexts` in the C header;
+release it with `llev_decoded_dictionary_terms_free`.
+
+`LlevDictionaryLimits` requires ceilings for the term count, each term,
+total term bytes, and payload bytes. The payload ceiling must be at least eight
+bytes. Bincode lengths, Protobuf graph shape and terminal paths, DAT term
+payloads, suffix source counts, gzip integrity, and compressed and inflated
+sizes are validated before native reconstruction. Malformed payloads return `INVALID_ARGUMENT`;
+exceeded ceilings return `LIMIT_EXCEEDED`. A failed call leaves the output
+buffer empty or the output snapshot pointer null. Without the serialization
+feature, the entry points return `UNSUPPORTED`.
+
+Generalized edit-operation sets have a separate native persistence family:
+`llev_operation_set_serialize` accepts the same borrowed operation descriptors
+as the standalone generalized automaton. Format IDs 1 through 4 select the
+versioned binary envelope, Protobuf V1, gzip binary, and gzip Protobuf. The
+caller supplies `LlevOperationSetLimits`, covering payload bytes, operation
+count, name bytes, pair counts, and aggregate restriction text. Decoding with
+`llev_operation_set_deserialize` returns an owned `LlevDecodedOperationSet`.
+`llev_decoded_operation_set_operation_at` and
+`llev_decoded_operation_set_restriction_at` borrow views until
+`llev_decoded_operation_set_free`. Restriction kind 1 preserves exact raw-byte
+pairs, including non-UTF-8 values; kind 2 borrows UTF-8 string pairs.
+`llev_decoded_operation_set_serialize` re-encodes the native snapshot without
+losing byte pairs. Invalid versions, malformed envelopes, truncated or trailing
+data, invalid Protobuf, corrupt gzip, and exceeded resource ceilings reject the
+input before a handle is published. Every encoded buffer uses
+`llev_owned_bytes_free`.
+
+The value-preserving Bincode entry points
+`llev_valued_dictionary_serialize` and
+`llev_valued_dictionary_deserialize` bind native
+`BincodeSerializer::serialize_with_values`,
+`serialize_with_values_char`, and `deserialize_with_values`. Unit domains 1
+and 2 select byte or Unicode dictionaries. Value kinds 1 and 2 select `u64`
+or `Vec<u8>` records, which have distinct native wire types and differ from
+term-only Bincode. `LlevValueLimits` bounds count, per-entry and aggregate
+term/value bytes, and the entire payload. A decoded handle owns canonical
+entries; inspect it with `llev_decoded_value_entries_len` and
+`llev_decoded_value_entry_at`, then call
+`llev_decoded_value_entries_free`. Empty raw-byte values remain present.
+Borrowed views expire when the handle is freed. The format carries no value
+kind or unit-domain tag, so persist those alongside the bytes.
+
 ## 9. A complete C consumer
 
 The program below is the whole § 7 flow in one file: obtain a resource from

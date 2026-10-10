@@ -511,6 +511,8 @@ native-bindings-full = [
     "ffi",
     "bindings-phonetic",
     "serialization",
+    "protobuf",
+    "compression",
 ]
 # Test-only cross-project producer/consumer surface. This is deliberately not
 # included by a publishable language alias: liblevenshtein consumes the ABI and

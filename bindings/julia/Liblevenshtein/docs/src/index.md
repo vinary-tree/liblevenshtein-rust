@@ -345,6 +345,14 @@ different pruning and continuation behavior.
 For IPA feature scores, syllable heuristics, compiled rewrite rules, and
 dictionary-free word search, see [Phonetic matching and analysis](phonetic.md).
 
+## Binary persistence
+
+Native Bincode (including value-bearing dictionaries), Protocol Buffers, DAT,
+gzip, suffix-automaton source-text, and generalized operation-set formats are
+exposed with explicit resource limits and closeable decoded snapshots. See
+[Native binary persistence](serialization.md)
+for the format and ownership contracts.
+
 ## Resource-backed search
 
 A `Transducer` accepts a `VinaryTreeInterop.Resource` or
