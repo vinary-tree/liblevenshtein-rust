@@ -360,6 +360,17 @@ such operation with its reviewed rationale; an unreasoned absence fails CI.
 | Repeated phonetic rewriting | Parse or select a rule set once, then apply it repeatedly | Rule validation and allocation are amortized while each returned string remains independently owned. |
 | Cross-project dictionaries | Pass the retained dictionary resource directly | The versioned resource preserves snapshot identity without serialization or shared Rust layout. |
 
+Native operation-set persistence uses `llev_operation_set_serialize` and
+`llev_operation_set_deserialize` with explicit `LlevOperationSetLimits`.
+The decoded `LlevDecodedOperationSet` is inspected through
+`llev_decoded_operation_set_len`,
+`llev_decoded_operation_set_operation_at`, and
+`llev_decoded_operation_set_restriction_at`. Raw-byte restrictions retain their
+exact bytes. `llev_decoded_operation_set_serialize` writes a new owned buffer;
+free it with `llev_owned_bytes_free` and close the snapshot with
+`llev_decoded_operation_set_free`. The same C reference documents dictionary
+and suffix binary formats, their version IDs, and feature gates.
+
 For the exhaustive native function contract—including exact preconditions,
 returnable statuses, complexity, and thread-safety—use the
 [`llev_*` C ABI reference](../../docs/bindings/c-abi-reference.md). The facade

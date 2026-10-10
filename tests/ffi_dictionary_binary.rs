@@ -24,6 +24,61 @@ fn limits() -> LlevDictionaryLimits {
     }
 }
 
+#[cfg(all(feature = "protobuf", feature = "compression"))]
+#[test]
+fn rc5_native_dictionary_payloads_decode_with_current_bridge() {
+    let fixtures: [&[u8]; 7] = [
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/dictionary-bincode-v1.bin"),
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/dictionary-protobuf-v1.bin"),
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/dictionary-protobuf-v2.bin"),
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/dictionary-gzip-bincode-v1.bin"),
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/dictionary-gzip-protobuf-v1.bin"),
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/dictionary-gzip-protobuf-v2.bin"),
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/dictionary-dat-v1.bin"),
+    ];
+    for (index, bytes) in fixtures.into_iter().enumerate() {
+        let mut decoded: *mut LlevDecodedDictionaryTerms = std::ptr::null_mut();
+        assert_eq!(
+            unsafe {
+                llev_dictionary_deserialize(
+                    (index + 1) as u32,
+                    bytes.as_ptr(),
+                    bytes.len(),
+                    &limits(),
+                    &mut decoded,
+                )
+            },
+            LlevStatus::Ok,
+            "RC.5 format {} did not decode",
+            index + 1
+        );
+        let mut count = 0;
+        assert_eq!(
+            unsafe { llev_decoded_dictionary_terms_len(decoded, &mut count) },
+            LlevStatus::Ok
+        );
+        let mut terms = Vec::new();
+        for term_index in 0..count {
+            let mut view = LlevUtf8Slice {
+                data: std::ptr::null(),
+                len: 0,
+            };
+            assert_eq!(
+                unsafe { llev_decoded_dictionary_term_at(decoded, term_index, &mut view) },
+                LlevStatus::Ok
+            );
+            let bytes = if view.len == 0 {
+                &[][..]
+            } else {
+                unsafe { std::slice::from_raw_parts(view.data, view.len) }
+            };
+            terms.push(std::str::from_utf8(bytes).unwrap().to_owned());
+        }
+        assert_eq!(terms, ["", "cab", "café"]);
+        unsafe { llev_decoded_dictionary_terms_free(decoded) };
+    }
+}
+
 #[test]
 fn bincode_bridge_matches_native_wire_and_retains_decoded_terms() {
     let source = ["cab", "ab", "café"];

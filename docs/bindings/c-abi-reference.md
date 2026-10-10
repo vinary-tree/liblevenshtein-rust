@@ -1328,6 +1328,23 @@ exceeded ceilings return `LIMIT_EXCEEDED`. A failed call leaves the output
 buffer empty or the output snapshot pointer null. Without the serialization
 feature, the entry points return `UNSUPPORTED`.
 
+Generalized edit-operation sets have a separate native persistence family:
+`llev_operation_set_serialize` accepts the same borrowed operation descriptors
+as the standalone generalized automaton. Format IDs 1 through 4 select the
+versioned binary envelope, Protobuf V1, gzip binary, and gzip Protobuf. The
+caller supplies `LlevOperationSetLimits`, covering payload bytes, operation
+count, name bytes, pair counts, and aggregate restriction text. Decoding with
+`llev_operation_set_deserialize` returns an owned `LlevDecodedOperationSet`.
+`llev_decoded_operation_set_operation_at` and
+`llev_decoded_operation_set_restriction_at` borrow views until
+`llev_decoded_operation_set_free`. Restriction kind 1 preserves exact raw-byte
+pairs, including non-UTF-8 values; kind 2 borrows UTF-8 string pairs.
+`llev_decoded_operation_set_serialize` re-encodes the native snapshot without
+losing byte pairs. Invalid versions, malformed envelopes, truncated or trailing
+data, invalid Protobuf, corrupt gzip, and exceeded resource ceilings reject the
+input before a handle is published. Every encoded buffer uses
+`llev_owned_bytes_free`.
+
 ## 9. A complete C consumer
 
 The program below is the whole § 7 flow in one file: obtain a resource from

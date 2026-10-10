@@ -63,6 +63,16 @@ export ABI_VERSION,
     GeneralizedRestriction,
     GeneralizedOperation,
     GeneralizedOperationSet,
+    OperationSetLimits,
+    OperationSetSnapshot,
+    SerializedOperation,
+    SerializedByteRestriction,
+    OPERATION_SET_FORMAT_BINARY_V1,
+    OPERATION_SET_FORMAT_PROTOBUF_V1,
+    OPERATION_SET_FORMAT_GZIP_BINARY_V1,
+    OPERATION_SET_FORMAT_GZIP_PROTOBUF_V1,
+    operation_set_bytes,
+    operation_set_snapshot,
     GeneralizedObservation,
     GeneralizedAutomaton,
     GeneralizedOnlineAutomaton,
@@ -1250,6 +1260,7 @@ include("PhoneticFiles.jl")
 include("PhoneticAot.jl")
 include("DictionarySerialization.jl")
 include("SuffixSerialization.jl")
+include("OperationSetSerialization.jl")
 
 function __init__()
     REDUCER_CALLBACK[] = @cfunction(reducer_callback, Cint,

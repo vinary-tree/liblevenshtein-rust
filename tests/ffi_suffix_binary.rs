@@ -19,6 +19,53 @@ fn limits() -> LlevDictionaryLimits {
     }
 }
 
+#[cfg(feature = "protobuf")]
+#[test]
+fn rc5_native_suffix_payloads_decode_with_current_bridge() {
+    let fixtures: [&[u8]; 2] = [
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/suffix-bincode-v1.bin"),
+        include_bytes!("../bindings/julia/Liblevenshtein/test/fixtures/serialization_rc5/suffix-protobuf-v1.bin"),
+    ];
+    for (index, bytes) in fixtures.into_iter().enumerate() {
+        let mut decoded: *mut LlevDecodedDictionaryTerms = std::ptr::null_mut();
+        assert_eq!(
+            unsafe {
+                llev_suffix_source_deserialize(
+                    (index + 1) as u32,
+                    bytes.as_ptr(),
+                    bytes.len(),
+                    &limits(),
+                    &mut decoded,
+                )
+            },
+            LlevStatus::Ok
+        );
+        let mut count = 0;
+        assert_eq!(
+            unsafe { llev_decoded_dictionary_terms_len(decoded, &mut count) },
+            LlevStatus::Ok
+        );
+        let mut texts = Vec::new();
+        for source_index in 0..count {
+            let mut view = LlevUtf8Slice {
+                data: std::ptr::null(),
+                len: 0,
+            };
+            assert_eq!(
+                unsafe { llev_decoded_dictionary_term_at(decoded, source_index, &mut view) },
+                LlevStatus::Ok
+            );
+            texts.push(
+                std::str::from_utf8(unsafe { std::slice::from_raw_parts(view.data, view.len) })
+                    .unwrap()
+                    .to_owned(),
+            );
+        }
+        assert_eq!(texts, ["banana", "bandana"]);
+        unsafe { llev_decoded_dictionary_terms_free(decoded) };
+    }
+}
+
 #[test]
 fn suffix_source_formats_match_native_bytes_and_preserve_order() {
     let source = ["cab", "café", "cab"];

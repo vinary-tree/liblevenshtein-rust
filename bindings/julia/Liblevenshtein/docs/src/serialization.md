@@ -1,13 +1,15 @@
-# Binary dictionary and suffix persistence
+# Native binary persistence
 
 Liblevenshtein.jl exposes the native Rust serializers as bounded byte APIs.
-Serialization means encoding an accepted dictionary term language or a suffix
-automaton's indexed source texts into bytes. The caller decides where to store
-those bytes. Decoding returns an immutable, closeable native string snapshot.
+Serialization encodes an accepted dictionary term language, a suffix
+automaton's indexed source texts, or a generalized edit-operation set into
+bytes. The caller decides where to store those bytes. Decoding returns a
+closeable native snapshot.
 
 These operations require native API revision 32 and the
 `BUILD_FEATURE_SERIALIZATION` bit. Protocol Buffers formats also require
 `BUILD_FEATURE_PROTOBUF`; gzip formats require `BUILD_FEATURE_COMPRESSION`.
+Operation-set persistence requires API revision 33.
 The [native persistence design](https://github.com/vinary-tree/liblevenshtein-rust/blob/master/docs/design/protobuf-serialization.md)
 defines the wire structures and compatibility roles.
 
@@ -77,6 +79,44 @@ finally
 end
 ```
 
+## Generalized operation-set formats
+
+`operation_set_bytes(operations; format=:binary_v1)` encodes a
+`GeneralizedOperationSet` using the native versioned binary envelope. Other
+formats are `:protobuf_v1`, `:gzip_binary_v1`, and `:gzip_protobuf_v1`.
+The binary envelope carries a format version and rejects unsupported versions
+or flags. Protobuf V1 uses its own versioned message. The selected codec must
+still be retained alongside gzip data.
+
+```julia
+grammar = GeneralizedOperationSet([
+    GeneralizedOperation(1, 1, 0, "match";
+        applicability=APPLICABILITY_EQUAL),
+    GeneralizedOperation(2, 1, 0.25, "digraph";
+        restrictions=["ph" => "f"]),
+])
+bytes = operation_set_bytes(grammar; format=:protobuf_v1)
+snapshot = operation_set_snapshot(bytes; format=:protobuf_v1)
+try
+    operations = collect(snapshot)
+    restored = GeneralizedOperationSet(snapshot)
+    @assert length(restored) == length(operations)
+finally
+    close(snapshot)
+end
+```
+
+The snapshot retains native operation data; iteration copies names and
+restriction pairs into Julia values. `SerializedByteRestriction` preserves
+native raw-byte pairs, including non-UTF-8 bytes. Re-encode such a snapshot
+with `operation_set_bytes(snapshot; format=...)`. Converting it to a Unicode
+`GeneralizedOperationSet` rejects raw-byte pairs because they have no Unicode
+scalar meaning. Each call accepts `max_payload_bytes`, `max_operations`,
+`max_operation_name_bytes`, `max_restriction_pairs_per_operation`,
+`max_total_restriction_pairs`, and `max_restriction_text_bytes`. Native decoders
+check complete input, version, graph/envelope structure, gzip integrity, and
+those ceilings before publishing a snapshot.
+
 ## Limits and ownership
 
 Every operation accepts `max_terms`, `max_term_bytes`,
@@ -97,6 +137,9 @@ snapshot deterministically when finished.
 
 The C bridge's format IDs map one-to-one to the selected native Rust
 serializers. Focused tests compare encoded bytes against those serializers in
-the same build and exercise malformed data and resource ceilings. Cross-build
-byte compatibility is promised only where the underlying format contract
-states it; native Bincode and optimized Protobuf remain versioned native data.
+the same build and exercise malformed data and resource ceilings. The suite
+also decodes 13 committed byte fixtures produced by the tagged RC.5 Rust
+serializers: seven dictionary formats, two suffix formats, and four operation-set
+formats. Cross-build byte compatibility is promised only where the underlying
+format contract states it; native Bincode and optimized Protobuf remain
+versioned native data.

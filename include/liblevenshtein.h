@@ -990,6 +990,67 @@ LLEV_API LlevStatus llev_decoded_dictionary_term_at(
     LlevUtf8Slice* out_term);
 LLEV_API void llev_decoded_dictionary_terms_free(LlevDecodedDictionaryTerms* terms);
 
+/** Native generalized-operation persistence formats and caller limits. */
+#define LLEV_OPERATION_SET_FORMAT_BINARY_V1 UINT32_C(1)
+#define LLEV_OPERATION_SET_FORMAT_PROTOBUF_V1 UINT32_C(2)
+#define LLEV_OPERATION_SET_FORMAT_GZIP_BINARY_V1 UINT32_C(3)
+#define LLEV_OPERATION_SET_FORMAT_GZIP_PROTOBUF_V1 UINT32_C(4)
+typedef struct LlevOperationSetLimits {
+    size_t max_payload_bytes;
+    size_t max_operations;
+    size_t max_operation_name_bytes;
+    size_t max_restriction_pairs_per_operation;
+    size_t max_total_restriction_pairs;
+    size_t max_restriction_text_bytes;
+} LlevOperationSetLimits;
+
+typedef struct LlevDecodedOperationSet LlevDecodedOperationSet;
+/** Borrowed operation metadata, valid until the decoded set is freed. */
+typedef struct LlevSerializedOperationView {
+    size_t consume_source;
+    size_t consume_target;
+    double weight;
+    const uint8_t* name_data;
+    size_t name_len;
+    uint32_t applicability;
+    size_t restriction_count;
+} LlevSerializedOperationView;
+/** Kind 1 preserves raw bytes; kind 2 borrows UTF-8 source/target strings. */
+typedef struct LlevSerializedRestrictionView {
+    uint32_t kind;
+    uint8_t source_byte;
+    uint8_t target_byte;
+    uint8_t reserved[2];
+    const uint8_t* source_data;
+    size_t source_len;
+    const uint8_t* target_data;
+    size_t target_len;
+} LlevSerializedRestrictionView;
+
+/** Encode operation descriptors with one native versioned codec. */
+LLEV_API LlevStatus llev_operation_set_serialize(
+    uint32_t format_id, const LlevGeneralizedOperation* operations,
+    size_t operation_count, const LlevOperationSetLimits* limits,
+    LlevOwnedBytes* out_bytes);
+/** Decode one complete payload into an independently owned native set. */
+LLEV_API LlevStatus llev_operation_set_deserialize(
+    uint32_t format_id, const uint8_t* data, size_t len,
+    const LlevOperationSetLimits* limits, LlevDecodedOperationSet** out_set);
+/** Re-encode a decoded set while retaining raw-byte restriction pairs. */
+LLEV_API LlevStatus llev_decoded_operation_set_serialize(
+    const LlevDecodedOperationSet* set, uint32_t format_id,
+    const LlevOperationSetLimits* limits, LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_decoded_operation_set_len(
+    const LlevDecodedOperationSet* set, size_t* out_len);
+LLEV_API LlevStatus llev_decoded_operation_set_operation_at(
+    const LlevDecodedOperationSet* set, size_t index,
+    LlevSerializedOperationView* out_view);
+LLEV_API LlevStatus llev_decoded_operation_set_restriction_at(
+    const LlevDecodedOperationSet* set, size_t operation_index,
+    size_t restriction_index, LlevSerializedRestrictionView* out_view);
+/** Free the decoded set; borrowed views become invalid. NULL is a no-op. */
+LLEV_API void llev_decoded_operation_set_free(LlevDecodedOperationSet* set);
+
 /** Dimension costs for native articulatory distance. Every field must be
  * finite and nonnegative. NULL selects Rust's FeatureDistanceWeights::standard.
  * The layout is seven consecutive IEEE-754 binary64 values. */

@@ -653,6 +653,8 @@ General-registry package or a versioned release reference.
 | `dictionary_bytes(terms; format=:protobuf_v1, ...)`, `dictionary_terms(bytes; format=:protobuf_v1, ...)` | Native binary persistence for Bincode V1, Protobuf V1/V2, DAT Protobuf, and gzip-wrapped general formats. |
 | `protobuf_dictionary_bytes`, `protobuf_dictionary_terms`, `gzip_bincode_dictionary_bytes`, `gzip_bincode_dictionary_terms`, `dat_protobuf_dictionary_bytes`, `dat_protobuf_dictionary_terms` | Format-specific convenience calls over the same bounded native bridge. |
 | `suffix_source_bytes(texts; format=:bincode_v1, ...)`, `suffix_source_texts(bytes; format=:bincode_v1, ...)` | Native Bincode V1 or Protobuf V1 source-text persistence for suffix automata; close the returned snapshot. |
+| `operation_set_bytes(grammar; format=:binary_v1, ...)`, `operation_set_snapshot(bytes; format=:binary_v1, ...)` | Native versioned binary, Protobuf, and gzip operation-set persistence; close the returned snapshot. |
+| `OperationSetSnapshot`, `SerializedOperation`, `SerializedByteRestriction` | Owned decoded set with copied operation views and exact raw-byte restriction pairs; `close(snapshot)` releases the native data. |
 | `close`, `isopen` | Deterministic lifecycle for every native owner. |
 
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to
