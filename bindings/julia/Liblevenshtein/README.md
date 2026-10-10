@@ -584,13 +584,13 @@ scales, and weights for typed vector comparisons.
   For normalized dictionaries, character-level and token-level grep,
   incremental rewriting, expansion, IPA feature queries, trusted file
   loaders, and versioned AOT bytes, see the [phonetic guide](docs/src/phonetic.md).
-- For a binary snapshot of a byte-domain dictionary's accepted terms, use
-  `bincode_dictionary_bytes(terms)` and close the iterator returned by
-  `bincode_dictionary_terms(bytes)`. The native encoder canonicalizes the term
-  language and uses the Rust bincode V1 dictionary format. This format stores
-  terms only; mapping values and in-memory backend layout are not preserved.
-  Each call has explicit term-count, term-size, total-term-byte, and payload-byte
-  ceilings and requires `BUILD_FEATURE_SERIALIZATION` and API revision 32.
+- For binary persistence of a byte-domain dictionary's accepted terms, use
+  `dictionary_bytes(terms; format=:protobuf_v1)` and close the iterator returned
+  by `dictionary_terms(bytes; format=:protobuf_v1)`. Bincode V1, Protobuf V1/V2,
+  DAT Protobuf, and gzip-wrapped general formats are also available. Use
+  `suffix_source_bytes` and `suffix_source_texts` for suffix-automaton source
+  texts. The [serialization guide](docs/src/serialization.md) explains formats,
+  feature negotiation, ceilings, byte ownership, and compatibility.
 
 ## API reference
 
@@ -650,6 +650,9 @@ General-registry package or a versioned release reference.
 | `compiled_phonetic_bytes`, `load_compiled_phonetic_rules`, `load_compiled_phonetic_pattern` | Optional API-revision-8 binary AOT roundtrip, gated by `BUILD_FEATURE_PHONETIC_AOT`. |
 | `bincode_dictionary_bytes(terms; format_version=1, max_terms=100_000, max_term_bytes=1_048_576, max_total_term_bytes=67_108_864, max_payload_bytes=100_663_296)` | Encode the accepted UTF-8 byte-dictionary term language in native bincode V1 bytes. |
 | `bincode_dictionary_terms(bytes; format_version=1, ...)` | Validate and decode one complete bincode V1 payload into a closeable immutable term snapshot. |
+| `dictionary_bytes(terms; format=:protobuf_v1, ...)`, `dictionary_terms(bytes; format=:protobuf_v1, ...)` | Native binary persistence for Bincode V1, Protobuf V1/V2, DAT Protobuf, and gzip-wrapped general formats. |
+| `protobuf_dictionary_bytes`, `protobuf_dictionary_terms`, `gzip_bincode_dictionary_bytes`, `gzip_bincode_dictionary_terms`, `dat_protobuf_dictionary_bytes`, `dat_protobuf_dictionary_terms` | Format-specific convenience calls over the same bounded native bridge. |
+| `suffix_source_bytes(texts; format=:bincode_v1, ...)`, `suffix_source_texts(bytes; format=:bincode_v1, ...)` | Native Bincode V1 or Protobuf V1 source-text persistence for suffix automata; close the returned snapshot. |
 | `close`, `isopen` | Deterministic lifecycle for every native owner. |
 
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to

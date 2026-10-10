@@ -275,7 +275,9 @@ def render_c(model: dict) -> str:
             "CORE": "Core distance, transducer, cursor, and batch surface.",
             "PHONETIC": "Compiled phonetic patterns and rewrite-rule sets.",
             "PHONETIC_AOT": "Versioned compiled phonetic rule and pattern bytes.",
-            "SERIALIZATION": "Native dictionary bincode serialization and decoding.",
+            "SERIALIZATION": "Native dictionary binary serialization and decoding.",
+            "PROTOBUF": "Native dictionary Protocol Buffers V1 and V2 formats.",
+            "COMPRESSION": "Native dictionary gzip persistence wrappers.",
         }[name]
         lines.append(f"/** Build-feature bit: {description} */")
         lines.append(f"#define LLEV_BUILD_FEATURE_{name} UINT64_C({value})")

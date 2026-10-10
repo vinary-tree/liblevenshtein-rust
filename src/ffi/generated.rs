@@ -13,6 +13,10 @@ pub const LLEV_BUILD_FEATURE_PHONETIC: u64 = 2;
 pub const LLEV_BUILD_FEATURE_PHONETIC_AOT: u64 = 4;
 /// Compiled binding feature: serialization.
 pub const LLEV_BUILD_FEATURE_SERIALIZATION: u64 = 8;
+/// Compiled binding feature: protobuf.
+pub const LLEV_BUILD_FEATURE_PROTOBUF: u64 = 16;
+/// Compiled binding feature: compression.
+pub const LLEV_BUILD_FEATURE_COMPRESSION: u64 = 32;
 
 /// Result of a fallible native operation.
 #[repr(u32)]

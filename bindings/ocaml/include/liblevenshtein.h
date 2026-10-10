@@ -937,39 +937,58 @@ typedef struct LlevUtf8Slice {
     size_t len;
 } LlevUtf8Slice;
 
-/** Caller-selected ceilings for native dictionary bincode input and output. */
-typedef struct LlevDictionaryBincodeLimits {
+/** Caller-selected ceilings for native dictionary binary input and output. */
+typedef struct LlevDictionaryLimits {
     size_t max_terms;
     size_t max_term_bytes;
     size_t max_total_term_bytes;
     size_t max_payload_bytes;
-} LlevDictionaryBincodeLimits;
+} LlevDictionaryLimits;
 
-typedef struct LlevDecodedBincodeTerms LlevDecodedBincodeTerms;
+typedef struct LlevDecodedDictionaryTerms LlevDecodedDictionaryTerms;
 
-/** Encode byte-dictionary terms with the native fixed-int little-endian
- * bincode format. format_version must be 1. The input terms are copied for
- * this call; output must be released with llev_owned_bytes_free. The
- * serialization feature is required, otherwise UNSUPPORTED is returned. */
-LLEV_API LlevStatus llev_dictionary_bincode_serialize(
-    uint32_t format_version, const LlevUtf8Slice* terms, size_t term_count,
-    const LlevDictionaryBincodeLimits* limits, LlevOwnedBytes* out_bytes);
+/** Binary format IDs; each identifies a format family and wire revision. */
+#define LLEV_DICTIONARY_FORMAT_BINCODE_V1 UINT32_C(1)
+#define LLEV_DICTIONARY_FORMAT_PROTOBUF_V1 UINT32_C(2)
+#define LLEV_DICTIONARY_FORMAT_PROTOBUF_V2 UINT32_C(3)
+#define LLEV_DICTIONARY_FORMAT_GZIP_BINCODE_V1 UINT32_C(4)
+#define LLEV_DICTIONARY_FORMAT_GZIP_PROTOBUF_V1 UINT32_C(5)
+#define LLEV_DICTIONARY_FORMAT_GZIP_PROTOBUF_V2 UINT32_C(6)
+#define LLEV_DICTIONARY_FORMAT_PROTOBUF_DAT_V1 UINT32_C(7)
 
-/** Decode one complete native bincode dictionary payload. A bounded preflight
- * validates every fixed-width count, UTF-8 term and payload boundary before
- * the native dictionary decoder allocates. format_version must be 1. */
-LLEV_API LlevStatus llev_dictionary_bincode_deserialize(
-    uint32_t format_version, const uint8_t* data, size_t len,
-    const LlevDictionaryBincodeLimits* limits,
-    LlevDecodedBincodeTerms** out_terms);
+/** Encode the accepted byte-dictionary terms with the selected native format.
+ * The input terms are copied for this call; release output through
+ * llev_owned_bytes_free. Unsupported compiled features return UNSUPPORTED. */
+LLEV_API LlevStatus llev_dictionary_serialize(
+    uint32_t format_id, const LlevUtf8Slice* terms, size_t term_count,
+    const LlevDictionaryLimits* limits, LlevOwnedBytes* out_bytes);
+
+/** Decode one complete native dictionary payload. A bounded format-specific
+ * preflight validates counts, UTF-8 and payload boundaries before the native
+ * dictionary decoder allocates. */
+LLEV_API LlevStatus llev_dictionary_deserialize(
+    uint32_t format_id, const uint8_t* data, size_t len,
+    const LlevDictionaryLimits* limits,
+    LlevDecodedDictionaryTerms** out_terms);
+
+/** Suffix formats preserve indexed source texts, not enumerated substrings. */
+#define LLEV_SUFFIX_FORMAT_BINCODE_V1 UINT32_C(1)
+#define LLEV_SUFFIX_FORMAT_PROTOBUF_V1 UINT32_C(2)
+typedef LlevDecodedDictionaryTerms LlevDecodedSourceTexts;
+LLEV_API LlevStatus llev_suffix_source_serialize(
+    uint32_t format_id, const LlevUtf8Slice* texts, size_t text_count,
+    const LlevDictionaryLimits* limits, LlevOwnedBytes* out_bytes);
+LLEV_API LlevStatus llev_suffix_source_deserialize(
+    uint32_t format_id, const uint8_t* data, size_t len,
+    const LlevDictionaryLimits* limits, LlevDecodedSourceTexts** out_texts);
 
 /** Inspect an immutable decoded term snapshot. Views remain valid until free. */
-LLEV_API LlevStatus llev_decoded_bincode_terms_len(
-    const LlevDecodedBincodeTerms* terms, size_t* out_len);
-LLEV_API LlevStatus llev_decoded_bincode_term_at(
-    const LlevDecodedBincodeTerms* terms, size_t index,
+LLEV_API LlevStatus llev_decoded_dictionary_terms_len(
+    const LlevDecodedDictionaryTerms* terms, size_t* out_len);
+LLEV_API LlevStatus llev_decoded_dictionary_term_at(
+    const LlevDecodedDictionaryTerms* terms, size_t index,
     LlevUtf8Slice* out_term);
-LLEV_API void llev_decoded_bincode_terms_free(LlevDecodedBincodeTerms* terms);
+LLEV_API void llev_decoded_dictionary_terms_free(LlevDecodedDictionaryTerms* terms);
 
 /** Dimension costs for native articulatory distance. Every field must be
  * finite and nonnegative. NULL selects Rust's FeatureDistanceWeights::standard.

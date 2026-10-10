@@ -13,6 +13,10 @@ const BUILD_FEATURE_PHONETIC = UInt64(2)
 const BUILD_FEATURE_PHONETIC_AOT = UInt64(4)
 """Compiled native feature bit: serialization."""
 const BUILD_FEATURE_SERIALIZATION = UInt64(8)
+"""Compiled native feature bit: protobuf."""
+const BUILD_FEATURE_PROTOBUF = UInt64(16)
+"""Compiled native feature bit: compression."""
+const BUILD_FEATURE_COMPRESSION = UInt64(32)
 
 """Result of a fallible native operation."""
 @enum Status::Cint begin

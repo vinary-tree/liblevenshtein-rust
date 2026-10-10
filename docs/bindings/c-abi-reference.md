@@ -1278,32 +1278,52 @@ provides worked examples while using these same native functions.
 
 ---
 
-## 8B. Bounded dictionary bincode snapshots
+## 8B. Bounded dictionary and suffix persistence
 
-API revision 32 adds five dictionary-byte operations behind
-`LLEV_BUILD_FEATURE_SERIALIZATION`. `llev_dictionary_bincode_serialize`
+API revision 32 adds native binary-format operations behind
+`LLEV_BUILD_FEATURE_SERIALIZATION`. `llev_dictionary_serialize`
 accepts borrowed `LlevUtf8Slice` terms, constructs the native byte-domain
 dictionary language, and returns a `LlevOwnedBytes` buffer released through
-`llev_owned_bytes_free`. `llev_dictionary_bincode_deserialize` accepts one
+`llev_owned_bytes_free`. `llev_dictionary_deserialize` accepts one
 complete binary payload and returns an independent, immutable
-`LlevDecodedBincodeTerms` snapshot. Read its length and borrowed term views
-with `llev_decoded_bincode_terms_len` and
-`llev_decoded_bincode_term_at`; the views expire when
-`llev_decoded_bincode_terms_free` releases the snapshot. The source bytes may
+`LlevDecodedDictionaryTerms` snapshot. Read its length and borrowed term views
+with `llev_decoded_dictionary_terms_len` and
+`llev_decoded_dictionary_term_at`; the views expire when
+`llev_decoded_dictionary_terms_free` releases the snapshot. The source bytes may
 be released immediately after a successful decode.
 
-The format argument is currently `1`, the native fixed-integer,
-little-endian bincode dictionary term encoding. Other versions return
-`INVALID_ARGUMENT`. This path preserves the accepted UTF-8 term language,
-including an empty term, but not dictionary values or the in-memory backend.
-The resulting bytes match the native `BincodeSerializer` output for the same
-accepted term set. Callers persist the independently owned bytes with their
-usual file or object-store operations.
+The format ID selects the serializer and its wire revision:
 
-`LlevDictionaryBincodeLimits` requires ceilings for the term count, each term,
+| Format ID | Native serializer | Feature gate | Compatibility role |
+|---|---|---|---|
+| `BINCODE_V1` = 1 | `BincodeSerializer` | Serialization | Fixed-integer, little-endian Rust format. |
+| `PROTOBUF_V1` = 2 | `ProtobufSerializer` | Protobuf | Portable V1 graph interchange. |
+| `PROTOBUF_V2` = 3 | `OptimizedProtobufSerializer` | Protobuf | Compact native V2 graph. |
+| `GZIP_BINCODE_V1` = 4 | `GzipSerializer<BincodeSerializer>` | Compression | Gzip over bincode V1. |
+| `GZIP_PROTOBUF_V1` = 5 | `GzipSerializer<ProtobufSerializer>` | Protobuf and compression | Gzip over portable V1. |
+| `GZIP_PROTOBUF_V2` = 6 | `GzipSerializer<OptimizedProtobufSerializer>` | Protobuf and compression | Gzip over compact V2. |
+| `PROTOBUF_DAT_V1` = 7 | `DatProtobufSerializer` | Protobuf | DAT-specific `LDT1` term payload. |
+
+Unknown format IDs return `INVALID_ARGUMENT`; a recognized format whose
+feature was omitted returns `UNSUPPORTED`. This path preserves the accepted UTF-8 term language,
+including an empty term, but not dictionary values or the in-memory backend.
+The resulting bytes match the selected native serializer's output for the same
+accepted term set. V2 and DAT are not promised to be readable by V1-only
+consumers. Callers persist the independently owned bytes with their usual file
+or object-store operations.
+
+`llev_suffix_source_serialize` and `llev_suffix_source_deserialize` select
+suffix-automaton Bincode V1 or Protobuf V1 with format IDs 1 and 2. They
+preserve the ordered indexed source texts, including duplicates. They do not
+enumerate the accepted substring language. The decoder publishes the same
+owned string-snapshot handle, typed as `LlevDecodedSourceTexts` in the C header;
+release it with `llev_decoded_dictionary_terms_free`.
+
+`LlevDictionaryLimits` requires ceilings for the term count, each term,
 total term bytes, and payload bytes. The payload ceiling must be at least eight
-bytes. Lengths, UTF-8, and exact end-of-payload are validated before native
-dictionary reconstruction. Malformed payloads return `INVALID_ARGUMENT`;
+bytes. Bincode lengths, Protobuf graph shape and terminal paths, DAT term
+payloads, suffix source counts, gzip integrity, and compressed and inflated
+sizes are validated before native reconstruction. Malformed payloads return `INVALID_ARGUMENT`;
 exceeded ceilings return `LIMIT_EXCEEDED`. A failed call leaves the output
 buffer empty or the output snapshot pointer null. Without the serialization
 feature, the entry points return `UNSUPPORTED`.

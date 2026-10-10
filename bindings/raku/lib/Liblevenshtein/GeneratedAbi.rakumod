@@ -8,6 +8,8 @@ our constant BUILD-FEATURE-CORE is export = 1;
 our constant BUILD-FEATURE-PHONETIC is export = 2;
 our constant BUILD-FEATURE-PHONETIC_AOT is export = 4;
 our constant BUILD-FEATURE-SERIALIZATION is export = 8;
+our constant BUILD-FEATURE-PROTOBUF is export = 16;
+our constant BUILD-FEATURE-COMPRESSION is export = 32;
 
 our enum Status is export (
     OK => 0,

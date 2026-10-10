@@ -345,34 +345,12 @@ different pruning and continuation behavior.
 For IPA feature scores, syllable heuristics, compiled rewrite rules, and
 dictionary-free word search, see [Phonetic matching and analysis](phonetic.md).
 
-## Binary dictionary term snapshots
+## Binary persistence
 
-`bincode_dictionary_bytes` calls the native Rust dictionary serializer and
-returns independently owned bytes. Its input is an iterable of UTF-8 terms or
-an `AbstractDict`, whose keys become terms. The byte-domain dictionary's
-accepted language is canonicalized, so duplicate terms collapse. The format
-does not preserve map values or a backend's memory layout. It requires native
-API revision 32 and `BUILD_FEATURE_SERIALIZATION`.
-
-```julia
-bytes = bincode_dictionary_bytes(["café", "cab", "cab"];
-    max_terms=3, max_term_bytes=8, max_total_term_bytes=16,
-    max_payload_bytes=128)
-snapshot = bincode_dictionary_terms(bytes;
-    max_terms=3, max_term_bytes=8, max_total_term_bytes=16,
-    max_payload_bytes=128)
-try
-    collect(snapshot) # ["cab", "café"]
-finally
-    close(snapshot)
-end
-```
-
-The decoder validates the complete bincode V1 payload, including UTF-8,
-declared lengths, and trailing bytes, before native reconstruction. The
-caller-supplied limits bound input terms, total term bytes, and payload bytes.
-The returned iterator owns an immutable native term snapshot; each yielded
-Julia string is copied and survives `close(snapshot)`.
+Native Bincode, Protocol Buffers, DAT, gzip, and suffix-automaton source-text
+formats are exposed with explicit resource limits and closeable decoded
+snapshots. See [Binary dictionary and suffix persistence](serialization.md)
+for the format and ownership contracts.
 
 ## Resource-backed search
 

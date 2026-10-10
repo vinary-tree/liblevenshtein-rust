@@ -25,8 +25,12 @@
 #define LLEV_BUILD_FEATURE_PHONETIC UINT64_C(2)
 /** Build-feature bit: Versioned compiled phonetic rule and pattern bytes. */
 #define LLEV_BUILD_FEATURE_PHONETIC_AOT UINT64_C(4)
-/** Build-feature bit: Native dictionary bincode serialization and decoding. */
+/** Build-feature bit: Native dictionary binary serialization and decoding. */
 #define LLEV_BUILD_FEATURE_SERIALIZATION UINT64_C(8)
+/** Build-feature bit: Native dictionary Protocol Buffers V1 and V2 formats. */
+#define LLEV_BUILD_FEATURE_PROTOBUF UINT64_C(16)
+/** Build-feature bit: Native dictionary gzip persistence wrappers. */
+#define LLEV_BUILD_FEATURE_COMPRESSION UINT64_C(32)
 
 /** Result of a fallible native operation. */
 typedef enum LlevStatus {

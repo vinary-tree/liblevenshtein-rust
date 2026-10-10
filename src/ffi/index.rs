@@ -2,8 +2,8 @@
 
 use super::{
     LlevAlgorithm, LlevQueryOrder, LlevStatus, LLEV_ABI_VERSION, LLEV_API_REVISION,
-    LLEV_BUILD_FEATURE_CORE, LLEV_BUILD_FEATURE_PHONETIC, LLEV_BUILD_FEATURE_PHONETIC_AOT,
-    LLEV_BUILD_FEATURE_SERIALIZATION,
+    LLEV_BUILD_FEATURE_COMPRESSION, LLEV_BUILD_FEATURE_CORE, LLEV_BUILD_FEATURE_PHONETIC,
+    LLEV_BUILD_FEATURE_PHONETIC_AOT, LLEV_BUILD_FEATURE_PROTOBUF, LLEV_BUILD_FEATURE_SERIALIZATION,
 };
 use crate::bindings::{
     BindingError, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceQueryCache,
@@ -284,7 +284,17 @@ pub extern "C" fn llev_build_features() -> u64 {
     } else {
         0
     };
-    LLEV_BUILD_FEATURE_CORE | phonetic | aot | serialization
+    let protobuf = if cfg!(feature = "protobuf") {
+        LLEV_BUILD_FEATURE_PROTOBUF
+    } else {
+        0
+    };
+    let compression = if cfg!(feature = "compression") {
+        LLEV_BUILD_FEATURE_COMPRESSION
+    } else {
+        0
+    };
+    LLEV_BUILD_FEATURE_CORE | phonetic | aot | serialization | protobuf | compression
 }
 
 /// Return a thread-local error message owned by the library.
