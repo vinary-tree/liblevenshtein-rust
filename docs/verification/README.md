@@ -98,10 +98,17 @@ executable invariants.
 | Tool | Artifact | Checked invariant |
 |---|---|---|
 | Rocq | `core/theories/Conformance/PositionKindVariant.v` | full-key injectivity, selector equivalence, continuation separation, and error-order prerequisites |
+| Rocq | `core/theories/Conformance/PositionWidthBound.v` | finite pigeonhole bound: two independently full-range 64-bit coordinates cannot be stored losslessly in one 64-bit word |
 | Verus | `verus/position_kind_variant.rs` | Rust-facing payload, ordering-key, selector, and built-in variant obligations |
 | Z3 + cvc5 | `smt/position_kind_variant.smt2` | eight independent negated representation/dispatch/subsumption obligations are UNSAT in both solvers |
 | TLA+ TLC | `tla/VariantDispatch.tla` | one edge-level selection is stable, processes each position once, and yields the legacy per-position trace |
-| proptest | `tests/proptest_position_kind_variants.rs` | 2,000 reference subsumption and 2,000 deterministic typed-transition cases plus ordering/layout properties |
+| proptest | `tests/proptest_position_kind_variants.rs` | 2,000 reference subsumption, 2,000 deterministic typed-transition, and 2,000 full-range coordinate cases plus ordering/layout properties |
+
+The width theorem models an in-line encoding of the two public `usize`
+coordinates. The corresponding property checks that the Rust constructors
+preserve both coordinates, including `usize::MAX`. The model does not assert
+that a handle into separately allocated storage is impossible; such a handle
+would change the representation and the memory-cost question.
 
 ## Affine-gap proof island
 
