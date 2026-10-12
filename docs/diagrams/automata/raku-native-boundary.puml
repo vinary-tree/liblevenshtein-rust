@@ -1,0 +1,49 @@
+@startuml
+!theme plain
+skinparam backgroundColor #FFFFFF
+skinparam sequenceArrowColor #254B75
+skinparam sequenceLifeLineBorderColor #254B75
+skinparam sequenceLifeLineBackgroundColor #ECF4FC
+skinparam sequenceParticipantBorderColor #254B75
+skinparam sequenceParticipantBackgroundColor #DDEBFA
+skinparam sequenceActorBorderColor #3B7D56
+skinparam sequenceActorBackgroundColor #E1F3E6
+skinparam noteBackgroundColor #FFF3D9
+skinparam noteBorderColor #A66B1D
+title Raku automata: committed prefix and independent ownership
+
+actor Caller
+participant "Raku facade" as Raku
+participant "C ABI" as ABI
+participant "Native configuration" as Config
+participant "Native online state" as Online
+
+Caller -> Raku: construct(operation set or variant/policy)
+Raku -> ABI: automaton_new(descriptors)
+ABI -> Config: copy and validate descriptors
+ABI --> Raku: owned configuration handle
+Caller -> Raku: online(source, limits)
+Raku -> ABI: online_new(configuration, source, limits)
+ABI -> Online: own configuration and bind source
+ABI --> Raku: owned online handle
+Caller -> Raku: close configuration
+Raku -> ABI: automaton_free(configuration)
+ABI -> Config: release caller's handle
+note over Online #E1F3E6: Online handle still owns its configuration.
+Caller -> Raku: advance(one target unit)
+Raku -> ABI: online_advance(unit)
+ABI -> Online: compute and commit one prefix
+ABI --> Raku: observation of committed prefix
+Caller -> Raku: advance(unit beyond limit)
+Raku -> ABI: online_advance(unit)
+ABI -> Online: reject before commit
+ABI --> Raku: LIMIT_EXCEEDED
+Caller -> Raku: observation()
+Raku -> ABI: online_observation()
+ABI -> Online: read last committed prefix
+ABI --> Raku: unchanged observation
+Caller -> Raku: close online state
+Raku -> ABI: online_free(handle)
+ABI -> Online: release owned state
+
+@enduml

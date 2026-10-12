@@ -140,6 +140,10 @@ transactional: `.observation` still describes the last committed prefix.
 Create one online handle per mutable traversal; an online handle remains valid
 if its immutable configuration closes first.
 
+The [Raku boundary verification map](../../docs/verification/RAKU_AUTOMATA_BOUNDARY.md)
+connects lifecycle, directional policy, and prefix invariants to the finite
+TLA+ model and the Raku NativeCall property suite.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
