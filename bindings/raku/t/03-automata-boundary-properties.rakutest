@@ -1,0 +1,169 @@
+use Test;
+use Liblevenshtein;
+
+# Concrete NativeCall correspondence for RakuAutomataBoundary.tla.  These
+# tests exercise the public facade and the native library, not a mock handle.
+
+my $equal = GeneralizedAutomaton.new(0, [
+    GeneralizedOperation.new(
+        consume-source => 1, consume-target => 1, weight => 0,
+        name => 'equal', applicability => APPLICABILITY-EQUAL,
+    ),
+]);
+for ('', 'a', 'ab', 'é') -> $source {
+    for ('', 'a', 'ab', 'é') -> $target {
+        my $online = $equal.online($source);
+        my $prefix = '';
+        is $online.observation.consumed-target-length, 0,
+            'generalized empty prefix has length zero';
+        is $online.observation.accepting, $equal.accepts($source, ''),
+            'generalized empty-prefix observation equals complete evaluation';
+        for $target.comb -> $scalar {
+            $prefix ~= $scalar;
+            my $step = $online.advance($scalar);
+            my $complete = $equal.evaluate($source, $prefix);
+            is $step.consumed-target-length, $prefix.chars,
+                'generalized advance commits one Unicode scalar';
+            is $step.accepting, $complete.accepting,
+                'generalized online prefix agrees with complete native evaluation';
+            is $step.scaled-distance, $complete.scaled-distance,
+                'generalized online and complete exact costs agree';
+            is $step.scale-denominator, $complete.scale-denominator,
+                'generalized online and complete scales agree';
+        }
+        $online.close;
+        $online.close;
+        nok $online.opened, 'generalized online close is idempotent';
+    }
+}
+$equal.close;
+$equal.close;
+nok $equal.opened, 'generalized configuration close is idempotent';
+
+my $listed = GeneralizedAutomaton.new(0, [
+    GeneralizedOperation.new(
+        consume-source => 1, consume-target => 1, weight => 0,
+        name => 'p to f', applicability => APPLICABILITY-LISTED,
+        restrictions => ['p' => 'f'],
+    ),
+]);
+ok $listed.accepts('p', 'f'), 'listed operation accepts its forward pair';
+nok $listed.accepts('f', 'p'), 'listed operation rejects the reverse pair';
+my $listed-state = $listed.online('p',
+    limits => AutomatonLimits.new(max-target-units => 1));
+$listed.close;
+ok $listed-state.advance('f').accepting,
+    'generalized online handle retains configuration after parent close';
+my $listed-before = $listed-state.observation;
+throws-like { $listed-state.advance('x') }, X::Liblevenshtein,
+    status => LIMIT-EXCEEDED, 'generalized target ceiling rejects a step';
+is $listed-state.observation.consumed-target-length,
+    $listed-before.consumed-target-length,
+    'generalized limit rejection leaves the prefix unchanged';
+is $listed-state.observation.accepting, $listed-before.accepting,
+    'generalized limit rejection leaves acceptance unchanged';
+dies-ok { $listed-state.advance('ab') },
+    'generalized advancement rejects a nonscalar unit';
+is $listed-state.observation.consumed-target-length, 1,
+    'invalid generalized unit leaves the prefix unchanged';
+$listed-state.close;
+throws-like { $listed-state.observation }, X::Liblevenshtein,
+    status => CLOSED, 'closed generalized online handle cannot be observed';
+
+my $bridge = GeneralizedAutomaton.new(0, [
+    GeneralizedOperation.new(
+        consume-source => 2, consume-target => 2, weight => 0,
+        name => 'pair equal', applicability => APPLICABILITY-EQUAL,
+    ),
+]);
+my $bridge-state = $bridge.online('ab');
+my $first = $bridge-state.advance('a');
+nok $first.current-row-nonempty,
+    'a two-target-unit rule can have an empty intermediate row';
+nok $first.accepting, 'the intermediate bridge prefix is not accepted';
+my $second = $bridge-state.advance('b');
+ok $second.current-row-nonempty, 'the retained row reconnects';
+ok $second.accepting, 'the completed bridge operation accepts';
+$bridge-state.close;
+$bridge.close;
+
+for UNIVERSAL-STANDARD, UNIVERSAL-TRANSPOSITION,
+    UNIVERSAL-MERGE-AND-SPLIT -> $variant {
+    for 0..1 -> $bound {
+        my $automaton = UniversalAutomaton.new($bound, :$variant);
+        for ('', 'a', 'ab', 'ba') -> $source {
+            for ('', 'a', 'ab', 'ba') -> $target {
+                my $online = $automaton.online($source);
+                my $prefix = '';
+                my $was-dead = !$online.observation.alive;
+                is $online.observation.accepting,
+                    $automaton.accepts($source, ''),
+                    'universal empty prefix agrees with complete evaluation';
+                for $target.comb -> $scalar {
+                    $prefix ~= $scalar;
+                    my $step = $online.advance($scalar);
+                    my $complete = $automaton.evaluate($source, $prefix);
+                    is $step.consumed-target-length, $prefix.chars,
+                        'universal advance commits one Unicode scalar';
+                    is $step.source-length, $source.chars,
+                        'universal observation retains source length';
+                    is $step.accepting, $complete.accepting,
+                        'universal online prefix agrees with complete native evaluation';
+                    nok $step.accepting, 'dead universal frontier cannot accept'
+                        if !$step.alive;
+                    nok $step.alive, 'dead universal frontier cannot revive'
+                        if $was-dead;
+                    $was-dead = !$step.alive;
+                }
+                $online.close;
+                $online.close;
+                nok $online.opened, 'universal online close is idempotent';
+            }
+        }
+        $automaton.close;
+    }
+}
+
+for (
+    [UNICODE-SCALAR, ['p' => 'f'], 'p', 'f', 'f', 'p'],
+    [BYTE, [112 => 102], Buf.new(112), Buf.new(102),
+        Buf.new(102), Buf.new(112)],
+    [U64, [(2**64 - 1) => (2**64 - 2)], [2**64 - 1],
+        [2**64 - 2], [2**64 - 2], [2**64 - 1]],
+) -> $case {
+    my ($domain, $pairs, $source, $target, $reverse-source,
+        $reverse-target) = $case.list;
+    my $policy = UniversalPolicy.new(domain => $domain,
+        equivalences => $pairs);
+    my $automaton = UniversalAutomaton.new(0, :$policy);
+    ok $automaton.accepts($source, $target),
+        'directional universal pair is accepted in its own domain';
+    nok $automaton.accepts($reverse-source, $reverse-target),
+        'reverse universal pair is rejected';
+    my $online = $automaton.online($source,
+        limits => AutomatonLimits.new(max-target-units => 1));
+    $automaton.close;
+    my $unit = $domain == UNICODE-SCALAR ?? $target
+        !! $target[0];
+    ok $online.advance($unit).accepting,
+        'universal online state retains its policy after parent close';
+    my $before = $online.observation;
+    throws-like { $online.advance($unit) }, X::Liblevenshtein,
+        status => LIMIT-EXCEEDED, 'universal target ceiling rejects a step';
+    is $online.observation.consumed-target-length,
+        $before.consumed-target-length,
+        'universal limit rejection leaves the committed prefix unchanged';
+    is $online.observation.accepting, $before.accepting,
+        'universal limit rejection leaves acceptance unchanged';
+    dies-ok { $online.advance($domain == UNICODE-SCALAR ?? 'ab' !! -1) },
+        'universal advancement rejects an invalid unit';
+    is $online.observation.consumed-target-length, 1,
+        'invalid universal unit leaves the prefix unchanged';
+    $online.close;
+    throws-like { $online.observation }, X::Liblevenshtein,
+        status => CLOSED, 'closed universal handle cannot be observed';
+    $automaton.close;
+    nok $automaton.opened, 'universal configuration close is idempotent';
+}
+
+done-testing;

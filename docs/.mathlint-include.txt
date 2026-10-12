@@ -265,6 +265,7 @@ docs/verification/msm/README.md
 docs/verification/phonetic/README.md
 docs/verification/phonetic/theories/README.md
 docs/verification/PHONETIC_JULIA_BINDING_CONTRACT.md
+docs/verification/RAKU_AUTOMATA_BOUNDARY.md
 docs/verification/PROOF_INDEX.md
 docs/verification/README_FORMAL_GATES.md
 docs/verification/README.md
