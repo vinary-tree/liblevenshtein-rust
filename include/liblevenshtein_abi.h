@@ -15,7 +15,7 @@
 /** Binary ABI generation implemented by this header and library. */
 #define LLEV_ABI_VERSION 1u
 /** Additive API revision within LLEV_ABI_VERSION. */
-#define LLEV_API_REVISION 10u
+#define LLEV_API_REVISION 11u
 /** Default maximum descriptors borrowed by one cursor batch. */
 #define LLEV_DEFAULT_MATCH_BATCH 256u
 
@@ -287,6 +287,17 @@ typedef struct LlevQueryCacheStats {
     size_t resident_entries; /**< Entries across both result-order shards. */
     size_t resident_weight; /**< Logical weight across both shards. */
 } LlevQueryCacheStats;
+
+/** Native TinyLFU tuning; zero width/interval selects bounded defaults. */
+typedef struct LlevQueryCacheConfig {
+    size_t max_entries_per_order; /**< Hard entries per order shard; zero disables residency. */
+    size_t max_weight_per_order; /**< Hard logical bytes per order shard; zero disables residency. */
+    size_t sketch_width; /**< Zero or power of two from 64 through 1048576. */
+    size_t age_after; /**< Zero or positive accesses between aging passes. */
+    uint64_t seed; /**< Deterministic hash seed when has_seed is one. */
+    uint8_t has_seed; /**< One to use seed, zero for randomized hashing. */
+    uint8_t reserved[7]; /**< Must be zero. */
+} LlevQueryCacheConfig;
 
 /** Heap-owned, length-bearing UTF-8 returned by the phonetic-rule API. */
 typedef struct LlevOwnedString {

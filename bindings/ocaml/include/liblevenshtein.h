@@ -374,6 +374,14 @@ LLEV_API LlevStatus llev_query_cache_new(
     size_t max_entries_per_order,
     size_t max_weight_per_order,
     LlevQueryCache** out_cache);
+/** Create a bounded TinyLFU/SIEVE cache with native sketch tuning.
+ * The options keep the same hard per-order residency bounds as
+ * llev_query_cache_new. Invalid settings return INVALID_ARGUMENT.
+ */
+LLEV_API LlevStatus llev_query_cache_new_configured(
+    const LlevTransducer* transducer,
+    const LlevQueryCacheConfig* config,
+    LlevQueryCache** out_cache);
 /** Drop every resident result while retaining the source transducer and counters.
  * @param cache live, exclusively borrowed cache
  * @return OK, NULL_POINTER, or PANIC

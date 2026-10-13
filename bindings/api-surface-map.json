@@ -210,6 +210,9 @@
           "symbol": "llev_query_cache_new",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": "llev_query_cache_new_configured"
+        },
         "llev_query_cache_clear": {
           "symbol": "llev_query_cache_clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -821,6 +824,10 @@
         "llev_query_cache_new": {
           "symbol": "query-cache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
         },
         "llev_query_cache_clear": {
           "symbol": "clear-cache!",
@@ -1538,6 +1545,10 @@
         "llev_query_cache_new": {
           "symbol": "vinary_tree::liblevenshtein::query_cache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
         },
         "llev_query_cache_clear": {
           "symbol": "query_cache::clear",
@@ -2257,6 +2268,10 @@
           "symbol": "QueryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.Clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -2957,6 +2972,10 @@
           "symbol": "new_query_cache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "query_cache%clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -3656,6 +3675,10 @@
           "symbol": "NewQueryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.Clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -4348,6 +4371,10 @@
         "llev_query_cache_new": {
           "symbol": "queryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
         },
         "llev_query_cache_clear": {
           "symbol": "clearQueryCache",
@@ -5059,6 +5086,10 @@
           "symbol": "queryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -5765,6 +5796,10 @@
         "llev_query_cache_new": {
           "symbol": "liblevenshtein.queryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
         },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.clear",
@@ -6495,6 +6530,10 @@
           "symbol": "QueryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -7195,6 +7234,10 @@
         "llev_query_cache_new": {
           "symbol": "query_cache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
         },
         "llev_query_cache_clear": {
           "symbol": "QueryCache:clear",
@@ -7897,6 +7940,10 @@
         "llev_query_cache_new": {
           "symbol": "query_cache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
         },
         "llev_query_cache_clear": {
           "symbol": "clear_query_cache",
@@ -8607,6 +8654,10 @@
           "symbol": "QueryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -9315,6 +9366,10 @@
           "symbol": "QueryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "QueryCache#clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -10018,6 +10073,10 @@
           "symbol": "QueryCache.init",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+        },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.clear",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -10707,6 +10766,10 @@
           "symbol": "QueryCache",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
+        "llev_query_cache_new_configured": {
+          "symbol": "QueryCache",
+          "note": "native TinyLFU/SIEVE cache tuning"
+        },
         "llev_query_cache_clear": {
           "symbol": "clear!",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
@@ -11277,6 +11340,10 @@
         "llev_query_cache_new": {
           "symbol": "QueryCache.new",
           "note": "shared native TinyLFU/SIEVE query-cache facade"
+        },
+        "llev_query_cache_new_configured": {
+          "symbol": null,
+          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
         },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.clear",

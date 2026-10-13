@@ -102,6 +102,33 @@ impl Default for QueryCacheLimits {
     }
 }
 
+/// Optional native TinyLFU tuning. SIEVE remains the eviction policy.
+/// A zero limit in [`QueryCacheLimits`] disables residency altogether.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub struct QueryCachePolicy {
+    /// Deterministic query-hash seed; `None` retains randomized production hashing.
+    pub seed: Option<u64>,
+    /// Power-of-two sketch columns, from 64 through 1,048,576; `None` derives it from capacity.
+    pub sketch_width: Option<usize>,
+    /// Recorded accesses between sketch aging passes; `None` uses ten per entry, at least 64.
+    pub age_after: Option<usize>,
+}
+
+impl QueryCachePolicy {
+    /// Validate the bounded sketch allocation and aging interval.
+    pub fn validate(self) -> Result<(), &'static str> {
+        if let Some(width) = self.sketch_width {
+            if !(MIN_SKETCH_WIDTH..=MAX_SKETCH_WIDTH).contains(&width) || !width.is_power_of_two() {
+                return Err("sketch_width must be a power of two from 64 through 1048576");
+            }
+        }
+        if self.age_after == Some(0) {
+            return Err("age_after must be positive");
+        }
+        Ok(())
+    }
+}
+
 /// Computes the logical residency weight of one complete cache entry.
 ///
 /// Custom weighers can account for nested allocations (for example, the
@@ -195,15 +222,19 @@ struct FrequencySketch {
 }
 
 impl FrequencySketch {
-    fn new(max_entries: usize) -> Self {
+    fn new(max_entries: usize, policy: QueryCachePolicy) -> Self {
         let desired = max_entries
             .saturating_mul(8)
             .clamp(MIN_SKETCH_WIDTH, MAX_SKETCH_WIDTH);
-        let width = desired.next_power_of_two().min(MAX_SKETCH_WIDTH);
+        let width = policy
+            .sketch_width
+            .unwrap_or_else(|| desired.next_power_of_two().min(MAX_SKETCH_WIDTH));
         let counter_count = width * SKETCH_ROWS;
-        let reset_at = max_entries
-            .saturating_mul(ACCESSES_PER_ENTRY_BEFORE_AGING)
-            .max(MIN_SKETCH_WIDTH);
+        let reset_at = policy.age_after.unwrap_or_else(|| {
+            max_entries
+                .saturating_mul(ACCESSES_PER_ENTRY_BEFORE_AGING)
+                .max(MIN_SKETCH_WIDTH)
+        });
         Self {
             counters: vec![0; counter_count.div_ceil(2)].into_boxed_slice(),
             doorkeeper: vec![0; width.div_ceil(64)].into_boxed_slice(),
@@ -330,7 +361,15 @@ fn cache_frequency_hash(query_hash: u64, max_distance: usize) -> u64 {
     mix64(query_hash ^ mix64(max_distance as u64 ^ ROW_SEEDS[0]))
 }
 
-fn cache_query_hasher() -> AHashRandomState {
+fn cache_query_hasher(policy: QueryCachePolicy) -> AHashRandomState {
+    if let Some(seed) = policy.seed {
+        return AHashRandomState::with_seeds(
+            mix64(seed ^ ROW_SEEDS[0]),
+            mix64(seed ^ ROW_SEEDS[1]),
+            mix64(seed ^ ROW_SEEDS[2]),
+            mix64(seed ^ ROW_SEEDS[3]),
+        );
+    }
     #[cfg(feature = "benchmark-controls")]
     if std::env::var_os("LIBLEVENSHTEIN_CAUSAL_QUERY_CACHE_FIXED_HASH_SEED").is_some() {
         return AHashRandomState::with_seeds(
@@ -388,6 +427,7 @@ type QueryHashBucket = SmallVec<[QueryRecord; 1]>;
 pub struct VersionedQueryCache<V, W = DefaultQueryCacheWeigher> {
     version: u64,
     limits: QueryCacheLimits,
+    policy: QueryCachePolicy,
     weigher: W,
     query_hasher: AHashRandomState,
     index: FxHashMap<u64, QueryHashBucket>,
@@ -427,7 +467,16 @@ impl<V> VersionedQueryCache<V> {
     where
         W: QueryCacheWeigher<V>,
     {
-        VersionedQueryCache::from_parts(limits, weigher)
+        VersionedQueryCache::from_parts(limits, QueryCachePolicy::default(), weigher)
+    }
+
+    /// Construct the bounded TinyLFU/SIEVE cache with native policy tuning.
+    pub fn with_policy(
+        limits: QueryCacheLimits,
+        policy: QueryCachePolicy,
+    ) -> Result<Self, &'static str> {
+        policy.validate()?;
+        Ok(Self::from_parts(limits, policy, DefaultQueryCacheWeigher))
     }
 }
 
@@ -435,12 +484,13 @@ impl<V, W> VersionedQueryCache<V, W>
 where
     W: QueryCacheWeigher<V>,
 {
-    fn from_parts(limits: QueryCacheLimits, weigher: W) -> Self {
+    fn from_parts(limits: QueryCacheLimits, policy: QueryCachePolicy, weigher: W) -> Self {
         Self {
             version: 0,
             limits,
+            policy,
             weigher,
-            query_hasher: cache_query_hasher(),
+            query_hasher: cache_query_hasher(policy),
             index: FxHashMap::default(),
             slots: Vec::new(),
             free_slots: Vec::new(),
@@ -608,7 +658,7 @@ where
         let query_hash = cache_query_hash(&self.query_hasher, query_key);
         let frequency_hash = cache_frequency_hash(query_hash, max_distance);
         self.frequency
-            .get_or_insert_with(|| FrequencySketch::new(self.limits.max_entries))
+            .get_or_insert_with(|| FrequencySketch::new(self.limits.max_entries, self.policy))
             .record(frequency_hash);
 
         if let Some(slot) = self.slot_for(query_hash, query_key, max_distance) {
@@ -1438,7 +1488,7 @@ mod tests {
 
     #[test]
     fn nibble_counters_saturate_and_age_independently() {
-        let mut sketch = FrequencySketch::new(8);
+        let mut sketch = FrequencySketch::new(8, QueryCachePolicy::default());
         let query_hash = cache_query_hash(&AHashRandomState::new(), b"hot");
         let hash = cache_frequency_hash(query_hash, 1);
         for _ in 0..1000 {
@@ -1447,5 +1497,51 @@ mod tests {
         assert!(sketch.estimate(hash) <= 16);
         sketch.clear();
         assert_eq!(sketch.estimate(hash), 0);
+    }
+
+    #[test]
+    fn configured_policy_is_bounded_and_reproducible() {
+        let policy = QueryCachePolicy {
+            seed: Some(0),
+            sketch_width: Some(128),
+            age_after: Some(40),
+        };
+        let mut first =
+            VersionedQueryCache::<u32>::with_policy(QueryCacheLimits::new(2, 1024), policy)
+                .unwrap();
+        let mut second =
+            VersionedQueryCache::<u32>::with_policy(QueryCacheLimits::new(2, 1024), policy)
+                .unwrap();
+        assert_eq!(
+            first.query_hasher.hash_one(b"key"),
+            second.query_hasher.hash_one(b"key")
+        );
+        for key in ["one", "two", "one", "three", "four", "one"] {
+            let expected = key.len() as u32;
+            assert_eq!(
+                &*first.get_or_compute(key, 1, 0, || vec![expected]),
+                &*second.get_or_compute(key, 1, 0, || vec![expected])
+            );
+        }
+        let sketch = first.frequency.as_ref().unwrap();
+        assert_eq!(sketch.width_mask, 127);
+        assert_eq!(sketch.reset_at, 40);
+        assert!(first.len() <= 2);
+        assert!(first.resident_weight() <= 1024);
+        assert_eq!(first.stats(), second.stats());
+        assert!(QueryCachePolicy {
+            sketch_width: Some(65),
+            ..policy
+        }
+        .validate()
+        .is_err());
+        assert!(QueryCachePolicy {
+            age_after: Some(0),
+            ..policy
+        }
+        .validate()
+        .is_err());
+        first.assert_invariants();
+        second.assert_invariants();
     }
 }
