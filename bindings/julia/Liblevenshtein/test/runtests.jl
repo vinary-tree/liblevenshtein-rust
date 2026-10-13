@@ -128,6 +128,12 @@ end
         @test_throws ArgumentError LL.QueryCache(transducer; seed=-1)
         @test_throws ArgumentError LL.QueryCache(transducer; policy=:lru)
         @test_throws ArgumentError LL.query(cache, "cut", -1)
+        default_cache = LL.QueryCache(transducer)
+        try
+            @test collect(LL.query(default_cache, "cut", 1)) == cold
+        finally
+            close(default_cache)
+        end
         disabled = LL.QueryCache(transducer; policy=:disabled)
         try
             @test collect(LL.query(disabled, "cut", 1)) == cold

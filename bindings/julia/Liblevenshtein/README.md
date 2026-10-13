@@ -340,6 +340,11 @@ to native capacity-derived values when zero. `seed` controls query hashing,
 which helps reproduce policy decisions; it does not change exact query results.
 Run `benchmark/cache_boundary.jl` with the package project to compare a warm
 native FFI hit with the Julia facade's cursor lifecycle on the same cache.
+On 2026-10-13, a short seven-block sample of 5,000 warm hits per arm on a
+Threadripper PRO 5975WX with Julia 1.13.1 measured 3,918 ns per hit through a
+direct Julia C call and 3,570 ns through the facade. The small negative delta
+is diagnostic noise or a difference in Julia call paths; the separate boundary
+benchmark task owns controlled performance budgets.
 
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to
 `Match.unit_domain`; `Match.id` is `nothing` or `UInt64`. Enum values and ABI

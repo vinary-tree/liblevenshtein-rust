@@ -744,10 +744,17 @@ function QueryCache(transducer::Transducer; max_entries::Integer=1024,
     config = Ref(RawQueryCacheConfig(entries, weight, sketch_width, age_after,
         seed === nothing ? 0 : UInt64(seed), seed === nothing ? 0 : 1, ntuple(_ -> 0x00, 7)))
     output = Ref{Ptr{Cvoid}}(C_NULL)
-    checked(ccall(native(:llev_query_cache_new_configured), Cint,
-        (Ptr{Cvoid}, Ref{RawQueryCacheConfig}, Ref{Ptr{Cvoid}}),
-        require_open(transducer), config, output),
-        :llev_query_cache_new_configured)
+    if policy == :tinylfu_sieve && seed === nothing && sketch_width == 0 && age_after == 0
+        checked(ccall(native(:llev_query_cache_new), Cint,
+            (Ptr{Cvoid}, Csize_t, Csize_t, Ref{Ptr{Cvoid}}),
+            require_open(transducer), entries, weight, output),
+            :llev_query_cache_new)
+    else
+        checked(ccall(native(:llev_query_cache_new_configured), Cint,
+            (Ptr{Cvoid}, Ref{RawQueryCacheConfig}, Ref{Ptr{Cvoid}}),
+            require_open(transducer), config, output),
+            :llev_query_cache_new_configured)
+    end
     value = QueryCache(output[], false)
     finalizer(close!, value)
     value
