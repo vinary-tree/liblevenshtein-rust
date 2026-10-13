@@ -299,10 +299,12 @@ General-registry package or a versioned release reference.
 | `snapshot(transducer)` | Owned immutable transducer revision. |
 | `unit_domain(transducer)` | `BYTE`, `UNICODE_SCALAR`, or `U64`. |
 | `query(transducer, input, k; order=...)` | Lazy query over `String`, `Vector{UInt8}`, integer tokens, or a pattern. |
-| `QueryCache(transducer; max_entries=1024, max_weight=64 * 1024 * 1024)` | Retains the transducer in an exclusive, synchronization-free bounded result cache; limits apply per result-order shard. |
+| `QueryCache(transducer; max_entries=1024, max_weight=64 * 1024 * 1024, policy=:tinylfu_sieve, seed=nothing, sketch_width=0, age_after=0)` | Retains the transducer in an exclusive native TinyLFU/SIEVE result cache. Hard limits apply per result-order shard. `seed` makes hashing reproducible; zero tuning values use native defaults. `policy=:disabled` computes exact results without retaining them. |
+| `llev_query_cache_new_configured` | Native constructor used by `QueryCache` for deterministic and bounded policy tuning. |
 | `query(cache, input, k; order=...)` | Materialize exactly on a miss or return an independent cursor over a resident immutable result. |
 | `cache_stats(cache)` | Copy requests, hits, misses, admissions, rejections, evictions, entries, and logical weight. |
 | `clear!(cache)`, `reset_stats!(cache)` | Drop residency or reset counters without conflating the two operations. |
+
 | `next_batch!(cursor, maximum)` | Copy one bounded leased batch into owned matches. |
 | `reduce_batches!(f, initial, cursor; batch_size=256)` | Invoke `f(accumulator, BorrowedBatch)` on lexical zero-copy batches and consume the cursor. |
 | `PhoneticPattern(source; llre=false)` | Compile regex or import-free LLRE source. |
@@ -330,6 +332,14 @@ General-registry package or a versioned release reference.
 | `load_phonetic_rules`, `load_phonetic_pattern` | Trusted local `.llev` include and `.llre` import resolution. |
 | `compiled_phonetic_bytes`, `load_compiled_phonetic_rules`, `load_compiled_phonetic_pattern` | Optional API-revision-8 binary AOT roundtrip, gated by `BUILD_FEATURE_PHONETIC_AOT`. |
 | `close`, `isopen` | Deterministic lifecycle for every native owner. |
+
+The configured cache remains a native TinyLFU admission and SIEVE eviction
+cache. `sketch_width` is a power of two between 64 and 1,048,576; `age_after`
+is the positive number of accesses between sketch aging passes. Both default
+to native capacity-derived values when zero. `seed` controls query hashing,
+which helps reproduce policy decisions; it does not change exact query results.
+Run `benchmark/cache_boundary.jl` with the package project to compare a warm
+native FFI hit with the Julia facade's cursor lifecycle on the same cache.
 
 `Match.term` is a `String`, `Vector{UInt8}`, or `Vector{UInt64}` according to
 `Match.unit_domain`; `Match.id` is `nothing` or `UInt64`. Enum values and ABI

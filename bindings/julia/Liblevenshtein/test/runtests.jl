@@ -18,6 +18,7 @@ const LL = Liblevenshtein
     @test sizeof(LL.RawMatch) == 48
     @test sizeof(LL.RawBatch) == 24
     @test sizeof(LL.RawQueryCacheStats) == 64
+    @test sizeof(LL.RawQueryCacheConfig) == 48
     @test sizeof(LL.OwnedString) == 16
     @test sizeof(LL.RawAutomatonLimits) == 32
     @test sizeof(LL.RawGeneralizedRestriction) == 32
@@ -106,7 +107,8 @@ end
     dictionary["cot"] = nothing
     provider = Libdictenstein.snapshot(dictionary)
     transducer = LL.Transducer(provider)
-    cache = LL.QueryCache(transducer; max_entries=8, max_weight=1 << 20)
+    cache = LL.QueryCache(transducer; max_entries=8, max_weight=1 << 20,
+        seed=0x1234, sketch_width=128, age_after=80)
     try
         cold = collect(LL.query(cache, "cut", 1))
         hit = collect(LL.query(cache, "cut", 1))
@@ -122,7 +124,20 @@ end
         LL.clear!(cache)
         @test isempty(cache)
         @test_throws ArgumentError LL.QueryCache(transducer; max_entries=-1)
+        @test_throws ArgumentError LL.QueryCache(transducer; sketch_width=65)
+        @test_throws ArgumentError LL.QueryCache(transducer; seed=-1)
+        @test_throws ArgumentError LL.QueryCache(transducer; policy=:lru)
         @test_throws ArgumentError LL.query(cache, "cut", -1)
+        disabled = LL.QueryCache(transducer; policy=:disabled)
+        try
+            @test collect(LL.query(disabled, "cut", 1)) == cold
+            @test collect(LL.query(disabled, "cut", 1)) == cold
+            disabled_stats = LL.cache_stats(disabled)
+            @test (disabled_stats.hits, disabled_stats.misses,
+                disabled_stats.rejections, disabled_stats.resident_entries) == (0, 2, 2, 0)
+        finally
+            close(disabled)
+        end
     finally
         LL.close!(cache)
         LL.close!(transducer)

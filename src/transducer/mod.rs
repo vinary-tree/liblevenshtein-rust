@@ -137,8 +137,8 @@ pub use query::{
     StringQueryIterator, UnitCandidate, UnitCandidateIterator, UnitQueryIterator,
 };
 pub use query_cache::{
-    DefaultQueryCacheWeigher, QueryCacheLimits, QueryCacheStats, QueryCacheWeigher,
-    VersionedQueryCache,
+    DefaultQueryCacheWeigher, QueryCacheLimits, QueryCachePolicy, QueryCacheStats,
+    QueryCacheWeigher, VersionedQueryCache,
 };
 pub use query_f64::{
     CandidateF64, CandidateIteratorF64, QueryIteratorF64, QueryResultF64, StringQueryIteratorF64,

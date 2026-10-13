@@ -214,6 +214,16 @@ struct RawQueryCacheStats
     resident_weight::Csize_t
 end
 
+struct RawQueryCacheConfig
+    max_entries_per_order::Csize_t
+    max_weight_per_order::Csize_t
+    sketch_width::Csize_t
+    age_after::Csize_t
+    seed::UInt64
+    has_seed::UInt8
+    reserved::NTuple{7,UInt8}
+end
+
 """A copied snapshot of bounded query-cache policy and residency counters."""
 struct QueryCacheStats
     requests::UInt64
@@ -715,14 +725,29 @@ mutable struct QueryCache
 end
 
 function QueryCache(transducer::Transducer; max_entries::Integer=1024,
-    max_weight::Integer=64 * 1024 * 1024)
-    max_entries >= 0 || throw(ArgumentError("max_entries must be nonnegative"))
-    max_weight >= 0 || throw(ArgumentError("max_weight must be nonnegative"))
+    max_weight::Integer=64 * 1024 * 1024, policy::Symbol=:tinylfu_sieve,
+    seed::Union{Nothing,Integer}=nothing, sketch_width::Integer=0,
+    age_after::Integer=0)
+    policy in (:tinylfu_sieve, :disabled) ||
+        throw(ArgumentError("policy must be :tinylfu_sieve or :disabled"))
+    for (name, value) in ((:max_entries, max_entries), (:max_weight, max_weight),
+        (:sketch_width, sketch_width), (:age_after, age_after))
+        0 <= value <= typemax(Csize_t) ||
+            throw(ArgumentError("$name must fit in a nonnegative Csize_t"))
+    end
+    (sketch_width == 0 || (64 <= sketch_width <= 1 << 20 && ispow2(sketch_width))) ||
+        throw(ArgumentError("sketch_width must be zero or a power of two from 64 through 1048576"))
+    seed === nothing || (0 <= seed <= typemax(UInt64)) ||
+        throw(ArgumentError("seed must fit in UInt64"))
+    entries = policy == :disabled ? 0 : max_entries
+    weight = policy == :disabled ? 0 : max_weight
+    config = Ref(RawQueryCacheConfig(entries, weight, sketch_width, age_after,
+        seed === nothing ? 0 : UInt64(seed), seed === nothing ? 0 : 1, ntuple(_ -> 0x00, 7)))
     output = Ref{Ptr{Cvoid}}(C_NULL)
-    checked(ccall(native(:llev_query_cache_new), Cint,
-        (Ptr{Cvoid}, Csize_t, Csize_t, Ref{Ptr{Cvoid}}),
-        require_open(transducer), max_entries, max_weight, output),
-        :llev_query_cache_new)
+    checked(ccall(native(:llev_query_cache_new_configured), Cint,
+        (Ptr{Cvoid}, Ref{RawQueryCacheConfig}, Ref{Ptr{Cvoid}}),
+        require_open(transducer), config, output),
+        :llev_query_cache_new_configured)
     value = QueryCache(output[], false)
     finalizer(close!, value)
     value

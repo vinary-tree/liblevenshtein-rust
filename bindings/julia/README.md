@@ -140,7 +140,7 @@ variants, protocols, or methods.
 | `query_filtered` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
 | `query_pruned` | `llev_transducer_query_pruned_utf8` | domain-preserving dictionary query |
 | `query_weighted` | `llev_transducer_query_weighted` | domain-preserving dictionary query |
-| `QueryCache` | `llev_query_cache_new` | project ABI operation |
+| `QueryCache` | `llev_query_cache_new`, `llev_query_cache_new_configured` | project ABI operation; bounded native TinyLFU/SIEVE policy configuration |
 | `reduce_batches!` | `llev_cost_cursor_reduce`, `llev_specialized_cursor_reduce`, `llev_query_cursor_reduce` | project ABI operation; streaming result traversal and batch leases |
 | `remove!` | `llev_phonetic_dictionary_update` | normalized phonetic dictionary construction, query, and updates |
 | `reset!` | `llev_phonetic_transducer_reset` | incremental phonetic rewriting and lifecycle |

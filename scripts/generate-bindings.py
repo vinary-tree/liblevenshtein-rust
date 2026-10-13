@@ -229,7 +229,7 @@ def validate(model: dict) -> None:
     }
     if model.get("interop") != expected_interop:
         raise SystemExit("binding model changed the shared interop identity")
-    if model.get("abiVersion") != 1 or model.get("apiRevision") != 10:
+    if model.get("abiVersion") != 1 or model.get("apiRevision") != 11:
         raise SystemExit("unexpected ABI/API revision")
     if model.get("defaultMatchBatch") != 256:
         raise SystemExit("default match batch must remain 256 in ABI v1")
@@ -502,6 +502,17 @@ def render_c(model: dict) -> str:
             "    size_t resident_entries; /**< Entries across both result-order shards. */",
             "    size_t resident_weight; /**< Logical weight across both shards. */",
             "} LlevQueryCacheStats;",
+            "",
+            "/** Native TinyLFU tuning; zero width/interval selects bounded defaults. */",
+            "typedef struct LlevQueryCacheConfig {",
+            "    size_t max_entries_per_order; /**< Hard entries per order shard; zero disables residency. */",
+            "    size_t max_weight_per_order; /**< Hard logical bytes per order shard; zero disables residency. */",
+            "    size_t sketch_width; /**< Zero or power of two from 64 through 1048576. */",
+            "    size_t age_after; /**< Zero or positive accesses between aging passes. */",
+            "    uint64_t seed; /**< Deterministic hash seed when has_seed is one. */",
+            "    uint8_t has_seed; /**< One to use seed, zero for randomized hashing. */",
+            "    uint8_t reserved[7]; /**< Must be zero. */",
+            "} LlevQueryCacheConfig;",
             "",
             "/** Heap-owned, length-bearing UTF-8 returned by the phonetic-rule API. */",
             "typedef struct LlevOwnedString {",

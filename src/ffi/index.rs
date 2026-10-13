@@ -8,7 +8,7 @@ use crate::bindings::{
     BindingError, MatchBatch, MatchTerm, QueryCursor, QueryOrder, ResourceQueryCache,
     ResourceTransducer, ValueFilterCallback,
 };
-use crate::transducer::{QueryCacheLimits, QueryCacheStats};
+use crate::transducer::{QueryCacheLimits, QueryCachePolicy, QueryCacheStats};
 use std::cell::RefCell;
 use std::ffi::{c_char, c_void, CString};
 use std::panic::{catch_unwind, AssertUnwindSafe};
@@ -24,6 +24,26 @@ pub struct LlevTransducer {
 /// Opaque, exclusive bounded complete-query cache.
 pub struct LlevQueryCache {
     inner: ResourceQueryCache,
+}
+
+/// Native bounded-cache settings. Zero width/interval selects native defaults.
+#[repr(C)]
+#[derive(Clone, Copy, Debug, Default)]
+pub struct LlevQueryCacheConfig {
+    /// Maximum entries in each result-order shard; zero disables residency.
+    pub max_entries_per_order: usize,
+    /// Maximum logical bytes in each shard; zero disables residency.
+    pub max_weight_per_order: usize,
+    /// Zero for default, or a power of two from 64 through 1,048,576.
+    pub sketch_width: usize,
+    /// Zero for default, or a positive interval between aging passes.
+    pub age_after: usize,
+    /// Deterministic hash seed when `has_seed` is one.
+    pub seed: u64,
+    /// One to use `seed`, zero for randomized hashing.
+    pub has_seed: u8,
+    /// Reserved bytes, all zero.
+    pub reserved: [u8; 7],
 }
 
 /// Aggregate cache-policy and residency counters across result-order shards.
@@ -404,6 +424,48 @@ pub unsafe extern "C" fn llev_query_cache_new(
             transducer.inner.clone(),
             QueryCacheLimits::new(max_entries_per_order, max_weight_per_order),
         );
+        out_cache.write(Box::into_raw(Box::new(LlevQueryCache { inner })));
+        Ok(LlevStatus::Ok)
+    })
+}
+
+/// Construct a bounded cache with native TinyLFU tuning and SIEVE eviction.
+///
+/// # Safety
+/// `transducer`, `config`, and `out_cache` must point to valid objects.
+#[no_mangle]
+pub unsafe extern "C" fn llev_query_cache_new_configured(
+    transducer: *const LlevTransducer,
+    config: *const LlevQueryCacheConfig,
+    out_cache: *mut *mut LlevQueryCache,
+) -> LlevStatus {
+    boundary(|| {
+        let transducer = transducer
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "transducer is null".into()))?;
+        let config = config
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "config is null".into()))?;
+        if out_cache.is_null() {
+            return Err((LlevStatus::NullPointer, "out_cache is null".into()));
+        }
+        if config.has_seed > 1 || config.reserved != [0; 7] {
+            return Err((
+                LlevStatus::InvalidArgument,
+                "invalid cache configuration flags".into(),
+            ));
+        }
+        let policy = QueryCachePolicy {
+            seed: (config.has_seed != 0).then_some(config.seed),
+            sketch_width: (config.sketch_width != 0).then_some(config.sketch_width),
+            age_after: (config.age_after != 0).then_some(config.age_after),
+        };
+        let inner = ResourceQueryCache::with_policy(
+            transducer.inner.clone(),
+            QueryCacheLimits::new(config.max_entries_per_order, config.max_weight_per_order),
+            policy,
+        )
+        .map_err(|message| (LlevStatus::InvalidArgument, message.into()))?;
         out_cache.write(Box::into_raw(Box::new(LlevQueryCache { inner })));
         Ok(LlevStatus::Ok)
     })

@@ -256,7 +256,19 @@ static void assert_reducer_api(LlevTransducer* transducer) {
 
 static void assert_query_cache_api(LlevTransducer* transducer) {
     LlevQueryCache* cache = NULL;
-    assert(llev_query_cache_new(transducer, 8, 1024 * 1024, &cache) ==
+    LlevQueryCacheConfig config = {0};
+    config.max_entries_per_order = 8;
+    config.max_weight_per_order = 1024 * 1024;
+    config.sketch_width = 128;
+    config.age_after = 80;
+    config.seed = 1234;
+    config.has_seed = 1;
+    config.sketch_width = 65;
+    assert(llev_query_cache_new_configured(transducer, &config, &cache) ==
+           LLEV_STATUS_INVALID_ARGUMENT);
+    assert(cache == NULL);
+    config.sketch_width = 128;
+    assert(llev_query_cache_new_configured(transducer, &config, &cache) ==
            LLEV_STATUS_OK);
     LlevQueryCursor* cursor = NULL;
     assert(llev_query_cache_query_utf8(

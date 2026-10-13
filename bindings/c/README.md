@@ -193,6 +193,7 @@ variants, protocols, or methods.
 | `llev_query_cache_clear` | `llev_query_cache_clear` | project ABI operation |
 | `llev_query_cache_free` | `llev_query_cache_free` | project ABI operation |
 | `llev_query_cache_new` | `llev_query_cache_new` | project ABI operation |
+| `llev_query_cache_new_configured` | `llev_query_cache_new_configured` | bounded native TinyLFU/SIEVE policy configuration |
 | `llev_query_cache_query_bytes` | `llev_query_cache_query_bytes` | project ABI operation |
 | `llev_query_cache_query_u64` | `llev_query_cache_query_u64` | project ABI operation |
 | `llev_query_cache_query_utf8` | `llev_query_cache_query_utf8` | project ABI operation |

@@ -11,10 +11,10 @@ use crate::phonetic::nfa::NFAChar;
 use crate::transducer::language::{LanguageProduct, MappedLanguageQueryIterator};
 use crate::transducer::{
     AffineGapParams, Algorithm, ContextualCost, ContextualQueryIterator, EditContext,
-    OperationCostsF64, PrefixPruner, PrefixQueryIterator, QueryCacheLimits, QueryCacheStats,
-    QueryIterator, QueryIteratorF64, RankedValueQueryIterator, Suggestion, UnitCandidate,
-    UnitCandidateF64, Unrestricted, ValueFilteredQueryIterator, ValueYieldingQueryIterator,
-    VersionedQueryCache,
+    OperationCostsF64, PrefixPruner, PrefixQueryIterator, QueryCacheLimits, QueryCachePolicy,
+    QueryCacheStats, QueryIterator, QueryIteratorF64, RankedValueQueryIterator, Suggestion,
+    UnitCandidate, UnitCandidateF64, Unrestricted, ValueFilteredQueryIterator,
+    ValueYieldingQueryIterator, VersionedQueryCache,
 };
 use arc_swap::ArcSwapOption;
 use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
@@ -2864,13 +2864,24 @@ impl fmt::Debug for ResourceQueryCache {
 impl ResourceQueryCache {
     /// Retain a transducer and create empty traversal/ordered policy shards.
     pub fn new(transducer: ResourceTransducer, limits: QueryCacheLimits) -> Self {
-        Self {
+        Self::with_policy(transducer, limits, QueryCachePolicy::default())
+            .expect("default cache policy is valid")
+    }
+
+    /// Retain a transducer with validated native TinyLFU tuning.
+    pub fn with_policy(
+        transducer: ResourceTransducer,
+        limits: QueryCacheLimits,
+        policy: QueryCachePolicy,
+    ) -> Result<Self, &'static str> {
+        policy.validate()?;
+        Ok(Self {
             transducer,
-            traversal: VersionedQueryCache::with_limits(limits),
-            ordered: VersionedQueryCache::with_limits(limits),
+            traversal: VersionedQueryCache::with_policy(limits, policy)?,
+            ordered: VersionedQueryCache::with_policy(limits, policy)?,
             identity: None,
             token_key: Vec::new(),
-        }
+        })
     }
 
     /// Configured hard limits for each result-order shard.

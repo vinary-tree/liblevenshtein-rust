@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 10,
+  "apiRevision": 11,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -384,6 +384,7 @@
         "query_utf8",
         "query_bytes",
         "query_u64",
+        "new_configured",
         "stats",
         "clear",
         "reset_stats",
@@ -736,6 +737,10 @@
     },
     {
       "name": "llev_query_cache_new",
+      "rustModule": "index"
+    },
+    {
+      "name": "llev_query_cache_new_configured",
       "rustModule": "index"
     },
     {

@@ -348,6 +348,8 @@ def operation_role(name: str) -> str:
         return "transducer lifecycle, snapshot, or domain metadata"
     if name.startswith("llev_query_cursor"):
         return "streaming result traversal and batch leases"
+    if name == "llev_query_cache_new_configured":
+        return "bounded native TinyLFU/SIEVE policy configuration"
     if name in {"llev_phonetic_pattern_to_bytes", "llev_phonetic_pattern_from_bytes"}:
         return "versioned compiled phonetic-pattern bytes"
     if name == "llev_phonetic_pattern_load_llre_file":
