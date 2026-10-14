@@ -20,6 +20,7 @@ isa-ok (ENGLISH-ORTHOGRAPHY), PhoneticRuleSetKind,
 is nativesizeof(RawMatch), 48, 'match layout matches LP64 C';
 is nativesizeof(RawBatch), 24, 'batch layout matches LP64 C';
 is nativesizeof(RawQueryCacheStats), 64, 'query-cache stats layout matches LP64 C';
+is nativesizeof(RawQueryCacheConfig), 48, 'query-cache config layout matches LP64 C';
 is nativesizeof(OwnedString), 16, 'owned string layout matches LP64 C';
 
 is distance('kitten', 'sitting'), 3, 'standard distance';
@@ -214,6 +215,47 @@ throws-like { $cache.query('cut', -1) }, X::AdHoc,
     'negative maximum distance is rejected before native conversion';
 $cache.close;
 nok $cache.opened, 'query cache closes deterministically';
+
+my $policy = QueryCachePolicy.new(
+    max-entries => 2, max-weight => 2**20,
+    sketch-width => 64, age-after => 8, seed => 2**64 - 1,
+);
+is $policy.seed, 2**64 - 1,
+    'policy builder retains the entire unsigned hash seed';
+my $configured = QueryCache.new(:$transducer, :$policy);
+is $configured.query('cut', 1).map(*.term).List,
+    $configured.query('cut', 1).map(*.term).List,
+    'configured cache returns exact results on misses and hits';
+is $configured.stats.hits, 1, 'configured cache serves a resident hit';
+ok $configured.stats.resident-entries <= 2,
+    'configured cache respects the per-order hard entry bound';
+for <cat cot dog ba m> -> $term {
+    $configured.query($term, 0).list;
+    ok $configured.stats.resident-entries <= 2,
+        'configured cache stays within its entry bound under churn';
+    ok $configured.stats.resident-weight <= 2**20,
+        'configured cache stays within its logical-weight bound under churn';
+}
+$configured.close;
+nok $configured.opened, 'configured cache closes deterministically';
+
+my $disabled = QueryCache.new(
+    :$transducer, policy => QueryCachePolicy.disabled,
+);
+for ^2 { is $disabled.query('cut', 1).map(*.term).List.elems, 2,
+    'disabled residency still computes an exact result'; }
+is-deeply [$disabled.stats.hits, $disabled.stats.misses,
+    $disabled.stats.resident-entries], [0, 2, 0],
+    'no-op policy never admits a result';
+$disabled.close;
+dies-ok { QueryCachePolicy.new(sketch-width => 65).native-config },
+    'invalid sketch width is rejected before NativeCall';
+dies-ok { QueryCachePolicy.new(seed => 2**64).native-config },
+    'out-of-range seed is rejected before NativeCall';
+dies-ok {
+    QueryCache.new(:$transducer, :$policy, max-entries => 1)
+}, 'policy and separate limits cannot silently conflict';
+
 
 sub query-terms(Algorithm:D $algorithm, Str:D $input, Int:D $maximum --> List:D) {
     my $variant = Transducer.new(:dictionary($provider), :$algorithm);

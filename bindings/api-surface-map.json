@@ -11342,8 +11342,8 @@
           "note": "shared native TinyLFU/SIEVE query-cache facade"
         },
         "llev_query_cache_new_configured": {
-          "symbol": null,
-          "_reason": "configured cache constructor is exposed by the Julia facade; this language facade retains the default native constructor"
+          "symbol": "QueryCache.new",
+          "note": "Raku QueryCachePolicy builder exposes native TinyLFU/SIEVE tuning"
         },
         "llev_query_cache_clear": {
           "symbol": "QueryCache.clear",

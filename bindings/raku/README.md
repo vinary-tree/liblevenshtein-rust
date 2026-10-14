@@ -15,6 +15,37 @@ shard one cache per worker. See the package Pod and the
 [query-cache design](../../docs/bindings/query-cache.md) for lifecycle,
 revision, and workload-selection guidance.
 
+For explicit tuning, pass a `QueryCachePolicy` builder. Its entry and logical
+weight limits apply independently to each result-order shard. A zero limit
+disables residency while preserving exact query results; `disabled` is the
+convenience constructor. `sketch-width` is zero (native default) or a power of
+two from 64 through 1,048,576; `age-after` is zero (native default) or a
+positive access count. `seed` is an optional unsigned 64-bit value for a
+reproducible admission hash. Native metadata is allocated on first use.
+
+```raku
+my $policy = QueryCachePolicy.new(
+    max-entries => 512, max-weight => 8 * 1024 * 1024,
+    sketch-width => 4096, age-after => 4096, seed => 42,
+);
+my $cache = QueryCache.new(:$transducer, :$policy);
+LEAVE $cache.close;
+my @matches = $cache.query('speling', 2).list;
+
+my $uncached = QueryCache.new(
+    :$transducer, policy => QueryCachePolicy.disabled,
+);
+LEAVE $uncached.close;
+```
+
+The Rust `Age`, `Lfu`, `Lru`, `LruOptimized`, `Ttl`, `CostAware`, and
+`MemoryPressure` types wrap dictionary providers; they do not implement
+bounded complete-query result caching. Their metadata maps have no hard
+residency bound, and TTL can change dictionary traversal semantics. They are
+therefore not options of `QueryCachePolicy`. `Noop` corresponds to disabled
+residency, and native query-cache metadata already initializes lazily. See
+[cache policy benchmark](benchmark/cache-policy.md) for measured workloads.
+
 ## Standalone distance families
 
 Each function below accepts two values of the **same** domain: `Str` compares
@@ -239,7 +270,7 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.new` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
 | `QueryCache.clear` | `llev_query_cache_clear` | project ABI operation |
 | `QueryCache.close` | `llev_query_cache_free` | project ABI operation |
-| `QueryCache.new` | `llev_query_cache_new` | project ABI operation |
+| `QueryCache.new` | `llev_query_cache_new`, `llev_query_cache_new_configured` | project ABI operation; bounded native TinyLFU/SIEVE policy configuration |
 | `QueryCache.query` | `llev_query_cache_query_utf8`, `llev_query_cache_query_bytes`, `llev_query_cache_query_u64` | project ABI operation |
 | `QueryCache.reset-stats` | `llev_query_cache_reset_stats` | project ABI operation |
 | `QueryCache.stats` | `llev_query_cache_stats` | project ABI operation |
