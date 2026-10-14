@@ -133,6 +133,62 @@ class RawQueryCacheStats is repr('CStruct') is export {
     has size_t $.resident-weight;
 }
 
+# Mirrors LlevQueryCacheConfig. Keep the seven trailing bytes explicit so the
+# C layout is independent of NativeCall's treatment of fixed-size arrays.
+class RawQueryCacheConfig is repr('CStruct') is export {
+    has size_t $.max-entries-per-order;
+    has size_t $.max-weight-per-order;
+    has size_t $.sketch-width;
+    has size_t $.age-after;
+    has uint64 $.seed;
+    has uint8 $.has-seed;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+    has uint8 $.reserved3;
+    has uint8 $.reserved4;
+    has uint8 $.reserved5;
+    has uint8 $.reserved6;
+}
+
+class QueryCachePolicy is export {
+    has Int:D $.max-entries = 1024;
+    has Int:D $.max-weight = 64 * 1024 * 1024;
+    has Int:D $.sketch-width = 0;
+    has Int:D $.age-after = 0;
+    has Mu $.seed = Nil;
+
+    method disabled(--> QueryCachePolicy:D) {
+        self.new(max-entries => 0, max-weight => 0)
+    }
+
+    method !raw(--> RawQueryCacheConfig:D) {
+        my $max = 2**(nativesizeof(size_t) * 8) - 1;
+        die 'max-entries exceeds native size_t' if $!max-entries < 0 || $!max-entries > $max;
+        die 'max-weight exceeds native size_t' if $!max-weight < 0 || $!max-weight > $max;
+        die 'sketch-width must be zero or a power of two from 64 through 1048576'
+            if $!sketch-width != 0 &&
+                ($!sketch-width < 64 || $!sketch-width > 1048576 ||
+                 $!sketch-width +& ($!sketch-width - 1));
+        die 'age-after exceeds native size_t' if $!age-after < 0 || $!age-after > $max;
+        die 'seed must be an unsigned 64-bit integer'
+            if $!seed.defined && ($!seed !~~ Int || $!seed < 0 || $!seed > 2**64 - 1);
+        RawQueryCacheConfig.new(
+            max-entries-per-order => $!max-entries,
+            max-weight-per-order => $!max-weight,
+            sketch-width => $!sketch-width,
+            age-after => $!age-after,
+            seed => $!seed.defined ?? $!seed !! 0,
+            has-seed => $!seed.defined ?? 1 !! 0,
+            reserved0 => 0, reserved1 => 0, reserved2 => 0,
+            reserved3 => 0, reserved4 => 0, reserved5 => 0,
+            reserved6 => 0,
+        )
+    }
+
+    method native-config(--> RawQueryCacheConfig:D) { self!raw }
+}
+
 class QueryCacheStats is export {
     has UInt:D $.requests is required;
     has UInt:D $.hits is required;
@@ -347,6 +403,8 @@ sub llev-transducer-unit-domain(Pointer, uint32 is rw --> int32)
     is native(&native-library) is symbol('llev_transducer_unit_domain') { * }
 sub llev-query-cache-new(Pointer, size_t, size_t, Pointer is rw --> int32)
     is native(&native-library) is symbol('llev_query_cache_new') { * }
+sub llev-query-cache-new-configured(Pointer, RawQueryCacheConfig, Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_query_cache_new_configured') { * }
 sub llev-query-cache-clear(Pointer --> int32)
     is native(&native-library) is symbol('llev_query_cache_clear') { * }
 sub llev-query-cache-reset-stats(Pointer --> int32)
@@ -1199,15 +1257,30 @@ class QueryCache is export {
 
     multi method new(
         Transducer:D :$transducer!,
-        Int:D :$max-entries = 1024,
-        Int:D :$max-weight = 64 * 1024 * 1024,
+        Int :$max-entries,
+        Int :$max-weight,
+        QueryCachePolicy :$policy,
     ) {
-        die 'max-entries must be nonnegative' if $max-entries < 0;
-        die 'max-weight must be nonnegative' if $max-weight < 0;
+        die 'a policy cannot be combined with max-entries or max-weight'
+            if $policy.defined && ($max-entries.defined || $max-weight.defined);
         my Pointer $output .= new;
-        check-status(llev-query-cache-new(
-            $transducer.native-handle, $max-entries, $max-weight, $output,
-        ), 'query-cache-new');
+        if $policy.defined {
+            my $config = $policy.native-config;
+            check-status(llev-query-cache-new-configured(
+                $transducer.native-handle, $config, $output,
+            ), 'query-cache-new-configured');
+        } else {
+            my $entries = $max-entries // 1024;
+            my $weight = $max-weight // 64 * 1024 * 1024;
+            my $max = 2**(nativesizeof(size_t) * 8) - 1;
+            die 'max-entries must be nonnegative' if $entries < 0;
+            die 'max-weight must be nonnegative' if $weight < 0;
+            die 'max-entries exceeds native size_t' if $entries > $max;
+            die 'max-weight exceeds native size_t' if $weight > $max;
+            check-status(llev-query-cache-new(
+                $transducer.native-handle, $entries, $weight, $output,
+            ), 'query-cache-new');
+        }
         self.bless(handle => $output)
     }
 

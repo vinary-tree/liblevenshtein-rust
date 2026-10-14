@@ -1,5 +1,8 @@
 # Raku standalone-distance dispatch budget
 
+The separate [query-cache policy workload](cache-policy.md) measures repeated
+hot queries, a scan, and mixed traffic through the native Raku cache facade.
+
 `distance-families.raku` measures every public standalone family over text,
 byte, and u64-token domains, in exact and thresholded modes: 42 dispatcher
 paths. It uses the same fixed equal-length, one-substitution input pattern in

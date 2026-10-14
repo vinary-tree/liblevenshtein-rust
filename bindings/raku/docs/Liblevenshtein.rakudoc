@@ -39,6 +39,21 @@ serve stale matches.
     my @matches = $cache.query('speling', 2).list;
     say $cache.stats.hits;
 
+C<QueryCachePolicy.new(:max-entries(512), :max-weight(8388608),
+:sketch-width(4096), :age-after(4096), :seed(42))> exposes the native bounded
+TinyLFU/SIEVE configuration. Pass it as C<:$policy> to C<QueryCache.new>.
+Zero sketch width or age interval selects the native default. The sketch
+width must otherwise be a power of two from 64 through 1048576; a seed must
+fit in unsigned 64 bits. C<QueryCachePolicy.disabled> selects no residency,
+retaining exact miss computation and statistics. Native cache metadata is
+initialized lazily on first use.
+
+The Rust dictionary-provider wrappers C<Age>, C<Lfu>, C<Lru>,
+C<LruOptimized>, C<Ttl>, C<CostAware>, and C<MemoryPressure> do not provide
+bounded complete-query caching. They are not selectable through this query
+cache policy. TTL on a dictionary may also change traversal results, unlike
+a query-result residency policy.
+
 =head1 Ownership
 
 Call C<close> on transducers, query caches, cursors, phonetic patterns, and
