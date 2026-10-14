@@ -883,6 +883,12 @@ LLEV_API LlevStatus llev_phonetic_rules_load_file(
  */
 LLEV_API LlevStatus llev_phonetic_rules_builtin(
     uint32_t kind, LlevPhoneticRuleSet** out_rules);
+/** Select embedded language/dialect rules by BCP 47 tag or supported alias.
+ * Requires bindings-phonetic and embedded-rules. Tag length must be 1..64
+ * UTF-8 bytes. Unknown tags return INVALID_ARGUMENT; missing build support
+ * returns UNSUPPORTED. The caller owns the resulting immutable rule set. */
+LLEV_API LlevStatus llev_phonetic_rules_language(
+    const char* tag, size_t tag_len, LlevPhoneticRuleSet** out_rules);
 /** Release a compiled rewrite-rule set.
  * @param rules owned rule set to consume; NULL is a no-op
  */

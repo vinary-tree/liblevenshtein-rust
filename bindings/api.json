@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 10,
+  "apiRevision": 11,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -920,6 +920,10 @@
     },
     {
       "name": "llev_phonetic_rules_builtin",
+      "rustModule": "phonetic"
+    },
+    {
+      "name": "llev_phonetic_rules_language",
       "rustModule": "phonetic"
     },
     {

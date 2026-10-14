@@ -355,6 +355,9 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "llev_phonetic_rules_builtin"
         },
+        "llev_phonetic_rules_language": {
+          "symbol": "llev_phonetic_rules_language"
+        },
         "llev_phonetic_rules_free": {
           "symbol": "llev_phonetic_rules_free"
         },
@@ -1003,6 +1006,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "phonetic-rules",
           "note": "selected with :english-orthography / :english-phonetic"
+        },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
         },
         "llev_phonetic_rules_free": {
           "symbol": "close!"
@@ -1717,6 +1724,10 @@
           "symbol": "llev_phonetic_rules_builtin",
           "note": "C API passthrough via the included liblevenshtein.h"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "llev_phonetic_rules_free",
           "note": "C API passthrough via the included liblevenshtein.h"
@@ -2427,6 +2438,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "PhoneticRuleSet.Builtin"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet.Dispose"
         },
@@ -3127,6 +3142,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "builtin_phonetic_rules"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "phonetic_rule_set%close"
         },
@@ -3826,6 +3845,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "BuiltinPhoneticRules"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet.Close"
         },
@@ -4522,6 +4545,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "phoneticRules",
           "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
         },
         "llev_phonetic_rules_free": {
           "symbol": "closeRules"
@@ -5232,6 +5259,10 @@
           "symbol": "phoneticRules",
           "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet.close"
         },
@@ -5938,6 +5969,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "liblevenshtein.phoneticRules",
           "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
         },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet.close"
@@ -6671,6 +6706,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "PhoneticRuleSet.builtin"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet.close"
         },
@@ -7372,6 +7411,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "phonetic_rules",
           "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
+        },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
         },
         "llev_phonetic_rules_free": {
           "symbol": "rules:close"
@@ -8076,6 +8119,10 @@
           "symbol": "phonetic_rules",
           "note": "selected with the \"english-orthography\"/\"english-phonetic\" sources"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "close_rules"
         },
@@ -8778,6 +8825,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "PhoneticRuleSet.__init__",
           "note": "selected by passing a PhoneticRuleSetKind"
+        },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
         },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet.close"
@@ -9485,6 +9536,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "PhoneticRuleSet.builtin"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet#close"
         },
@@ -10191,6 +10246,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "PhoneticRuleSet.builtin"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "PhoneticRuleSet.close"
         },
@@ -10854,6 +10913,10 @@
         "llev_phonetic_rules_builtin": {
           "symbol": "PhoneticRuleSet"
         },
+        "llev_phonetic_rules_language": {
+          "_reason": "FINDING: additive revision-11 embedded language-rule selection is not yet exposed by this facade; language-specific parity is tracked separately",
+          "symbol": null
+        },
         "llev_phonetic_rules_free": {
           "symbol": "close!"
         },
@@ -11447,6 +11510,9 @@
           "_reason": "FINDING: additive revision-8 native phonetic capability is not yet exposed by this language facade; binding parity is planned"
         },
         "llev_phonetic_rules_builtin": {
+          "symbol": "PhoneticRuleSet.new"
+        },
+        "llev_phonetic_rules_language": {
           "symbol": "PhoneticRuleSet.new"
         },
         "llev_phonetic_rules_free": {

@@ -140,6 +140,53 @@ transactional: `.observation` still describes the last committed prefix.
 Create one online handle per mutable traversal; an online handle remains valid
 if its immutable configuration closes first.
 
+## Phonetic search and rewriting
+
+The `raku-bindings` native feature includes `embedded-rules`. API revision 11
+adds language-tag selection: `PhoneticRuleSet.new(language => 'es')` selects
+the Rust registry, including supported dialect and case-insensitive aliases.
+`PhoneticRuleSet.new(source => $text)` parses an import-free `.llev` string.
+`PhoneticRuleSet.new(file => $path, search-paths => @paths)` resolves includes
+from a trusted local file; its byte ceiling bounds path arguments, not file
+contents. The rule set is immutable and independently owned.
+
+`phonetic-features` returns the native 42-bit IPA feature mask (bit indices are
+in `include/liblevenshtein.h`). `phonetic-chars-with-features`,
+`phonetic-similar-chars`, `phonetic-voicing-pair`, and
+`phonetic-feature-relation` query the same Rust classifier. The distance
+functions accept `PhoneticFeatureWeights` or the native defaults.
+`phonetic-syllable-count` and `phonetic-syllable-boundaries` select English
+orthography or IPA with `:ipa`. Boundary indices count Unicode scalars.
+`phonetic-named-class('vowel')` compiles the native `[:vowel:]` syntax as a
+`PhoneticPattern`; an unknown or malformed class fails during compilation.
+
+`PhoneticGrep` finds whole words and copies line, byte span, distance, and
+text. `PhoneticOnlineGrep` searches character spans; `.stream` clones its
+matcher and buffers no more than `:max-total-bytes`. `PhoneticTokenGrep`
+returns copied nested token details. `PhoneticTransducer` rewrites chunks;
+`.finish` requires `.reset` before reuse. `phonetic-expand` and
+`phonetic-expand-with-costs` require positive `PhoneticExpansionLimits`.
+`PhoneticNormalizedDictionary` copies input terms, supports mutable updates
+or immutable `:compact` mode, and returns owned candidate values. All scans
+and expansions require explicit finite work and result ceilings; methods use
+conservative defaults that can be lowered per call. Close each native handle
+with `LEAVE` or explicitly after use. Raku results retain independent copies
+after native arrays and their owners are freed.
+
+```raku
+my $rules = PhoneticRuleSet.new(language => 'es');
+LEAVE $rules.close;
+my $grep = PhoneticOnlineGrep.new(pattern => 'casa', :$rules);
+LEAVE $grep.close;
+say $grep.scan('la casa', max-input-bytes => 1024,
+    max-matches => 16).map(*.original-text).list;
+```
+
+The [phonetic family suite](t/03-phonetic-family.rakutest) exercises language
+selection, hostile inputs, bounded scans, copied nested ownership, mutation,
+and lifecycle. [Performance notes](benchmark/README.md) compare selected
+Raku calls with the same Rust implementation.
+
 <!-- BEGIN GENERATED BINDING OPERATIONS; DO NOT EDIT -->
 
 ## Support and package contract
@@ -236,7 +283,7 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.apply` | `llev_owned_string_free`, `llev_phonetic_rules_apply` | owned result-string release; phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.elems` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
-| `PhoneticRuleSet.new` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
+| `PhoneticRuleSet.new` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin`, `llev_phonetic_rules_language` | phonetic rule-set lifecycle and rewriting |
 | `QueryCache.clear` | `llev_query_cache_clear` | project ABI operation |
 | `QueryCache.close` | `llev_query_cache_free` | project ABI operation |
 | `QueryCache.new` | `llev_query_cache_new` | project ABI operation |

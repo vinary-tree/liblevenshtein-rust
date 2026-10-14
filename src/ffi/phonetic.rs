@@ -515,6 +515,55 @@ pub unsafe extern "C" fn llev_phonetic_rules_builtin(
     })
 }
 
+/// Select embedded language and dialect rules by a BCP 47 tag or supported
+/// alias. The tag is bounded to 64 UTF-8 bytes. Requires `embedded-rules` in
+/// addition to `bindings-phonetic`; unsupported tags are INVALID_ARGUMENT.
+///
+/// # Safety
+///
+/// Tag bytes and output pointer must be valid.
+#[no_mangle]
+pub unsafe extern "C" fn llev_phonetic_rules_language(
+    tag: *const c_char,
+    tag_len: usize,
+    out_rules: *mut *mut LlevPhoneticRuleSet,
+) -> LlevStatus {
+    boundary(|| {
+        #[cfg(all(feature = "bindings-phonetic", feature = "embedded-rules"))]
+        {
+            if out_rules.is_null() {
+                return Err((LlevStatus::NullPointer, "out_rules is null".into()));
+            }
+            if tag_len == 0 || tag_len > 64 {
+                return Err((
+                    LlevStatus::InvalidArgument,
+                    "language tag must have 1..64 UTF-8 bytes".into(),
+                ));
+            }
+            let tag = utf8(tag, tag_len)?;
+            let inner = PhoneticRuleSet::for_language(tag).ok_or((
+                LlevStatus::InvalidArgument,
+                format!("unsupported phonetic language tag {tag}"),
+            ))?;
+            out_rules.write(Box::into_raw(Box::new(LlevPhoneticRuleSet { inner })));
+            Ok(LlevStatus::Ok)
+        }
+        #[cfg(all(feature = "bindings-phonetic", not(feature = "embedded-rules")))]
+        {
+            let _ = (tag, tag_len, out_rules);
+            Err((
+                LlevStatus::Unsupported,
+                "embedded language rules were not compiled".into(),
+            ))
+        }
+        #[cfg(not(feature = "bindings-phonetic"))]
+        {
+            let _ = (tag, tag_len, out_rules);
+            Err(unavailable())
+        }
+    })
+}
+
 /// Free a rewrite-rule set.
 ///
 /// # Safety

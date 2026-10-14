@@ -172,6 +172,7 @@ variants, protocols, or methods.
 | `llev_phonetic_rules_builtin` | `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_free` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_from_bytes` | `llev_phonetic_rules_from_bytes` | versioned compiled phonetic-rule bytes |
+| `llev_phonetic_rules_language` | `llev_phonetic_rules_language` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_len` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
 | `llev_phonetic_rules_load_file` | `llev_phonetic_rules_load_file` | trusted .llev loading with native includes |
 | `llev_phonetic_rules_parse` | `llev_phonetic_rules_parse` | phonetic rule-set lifecycle and rewriting |

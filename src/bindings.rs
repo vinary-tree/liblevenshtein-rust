@@ -4157,6 +4157,18 @@ impl PhoneticRuleSet {
         }
     }
 
+    /// Select the embedded rules for a BCP 47 language or dialect tag.
+    #[cfg(feature = "embedded-rules")]
+    pub fn for_language(tag: &str) -> Option<Self> {
+        crate::phonetic::language::rules_for_language(tag).map(|rules| Self {
+            inner: crate::phonetic::llev::RuleSetChar {
+                rules,
+                name: Some(tag.to_owned()),
+                version: None,
+            },
+        })
+    }
+
     /// Apply rules to a fixed point using the native fuel bound.
     pub fn apply(&self, input: &str) -> String {
         self.inner.apply(input)
