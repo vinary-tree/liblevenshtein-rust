@@ -15,6 +15,69 @@ shard one cache per worker. See the package Pod and the
 [query-cache design](../../docs/bindings/query-cache.md) for lifecycle,
 revision, and workload-selection guidance.
 
+## Ranked and specialized dictionary traversal
+
+`query-ranked($text, $limit)` uses the native distance-then-term cursor.
+`query-mode` adds an inclusive distance interval; `query-suggestions` scores
+and sorts one native distance layer at a time, so it never materializes the
+whole result set. The scorer receives `(term, distance, optional-id)`, and
+non-finite scores rank last. All returned cursors support bounded
+`next-batch`, one-shot iteration, and deterministic `close` for early stops.
+
+`query-filtered` evaluates a Raku predicate on each optional dictionary ID
+before native term materialization. `query-contextual` uses three Raku cost
+callbacks for substitution, insertion, and deletion. A callback may return
+`Nil` to forbid an edit; every positive cost must respect the declared
+`minimum-nonzero-cost` or the native query fails rather than silently using
+an invalid pruning bound. `query-pruned` uses a balanced `PrefixVisitor` with
+`enter`, `leave`, `matches`, `permits`, and optional `score` callbacks. Its
+`SpecializedCursor.stats` copies exact native work counters without advancing
+the cursor.
+The ordinary `query` yields owned terms with optional dictionary IDs, and
+`query($pattern, $limit)` accepts a `PhoneticPattern` for the native
+dictionary-by-language product when that feature is built. Every traversal
+cursor offers `reduce-batches` for bounded page reductions; the specialized
+cursor also exposes `stats` while open.
+
+These callbacks run synchronously when the cursor advances, on its creating
+Raku thread. The binding roots every NativeCall callback until native close,
+contains Raku exceptions before returning to C, and rethrows them after the
+native call returns. Advance and close a callback cursor on that thread.
+Copy any callback argument you need after the callback returns. Keep an
+explicit `LEAVE $cursor.close` for early exits; `DESTROY` is only a fallback.
+
+```raku
+use Liblevenshtein;
+module Producer {
+    use Libdictenstein;
+    our sub dictionary() {
+        my $dictionary = dynamic-dawg();
+        $dictionary<cat> = 7;
+        $dictionary<cot> = Nil;
+        $dictionary
+    }
+}
+my $dictionary = Producer::dictionary();
+LEAVE $dictionary.close;
+my $snapshot = $dictionary.snapshot;
+LEAVE $snapshot.close;
+my $transducer = Transducer.new(:dictionary($snapshot));
+LEAVE $transducer.close;
+
+my $ranked = $transducer.query-ranked('cut', 1);
+LEAVE $ranked.close;
+say $ranked.next-batch(16).map(*.term);  # owned Raku matches
+
+my $filtered = $transducer.query-filtered('cut', 1,
+    -> $id { $id.defined && $id > 0 });
+LEAVE $filtered.close;
+say $filtered.map(*.term);
+```
+
+The native Raku traversal entry points require additive API revision 11.
+The [package Pod](docs/Liblevenshtein.rakudoc) defines each callback argument,
+cursor lifetime, and the exact statistics fields.
+
 ## Standalone distance families
 
 Each function below accepts two values of the **same** domain: `Str` compares
@@ -217,6 +280,7 @@ variants, protocols, or methods.
 | `affine-gap-distance` | `llev_affine_gap_distance`, `llev_affine_gap_distance_threshold`, `llev_affine_gap_distance_bytes`, `llev_affine_gap_distance_bytes_threshold`, `llev_affine_gap_distance_u64`, `llev_affine_gap_distance_u64_threshold` | project ABI operation |
 | `api-revision` | `llev_api_revision` | ABI compatibility and feature discovery |
 | `build-features` | `llev_build_features` | ABI compatibility and feature discovery |
+| `close` | `llev_specialized_cursor_free` | project ABI operation |
 | `damerau-distance` | `llev_damerau_distance`, `llev_damerau_distance_threshold`, `llev_damerau_distance_bytes`, `llev_damerau_distance_bytes_threshold`, `llev_damerau_distance_u64`, `llev_damerau_distance_u64_threshold` | standalone exact or thresholded distance |
 | `distance` | `llev_distance`, `llev_distance_threshold`, `llev_distance_bytes`, `llev_distance_bytes_threshold`, `llev_distance_u64`, `llev_distance_u64_threshold` | standalone exact or thresholded distance |
 | `GeneralizedAutomaton.close` | `llev_generalized_automaton_free` | runtime generalized-automaton lifecycle and prefix evaluation |
@@ -229,6 +293,7 @@ variants, protocols, or methods.
 | `hamming-distance` | `llev_hamming_distance`, `llev_hamming_distance_threshold`, `llev_hamming_distance_bytes`, `llev_hamming_distance_bytes_threshold`, `llev_hamming_distance_u64`, `llev_hamming_distance_u64_threshold` | project ABI operation |
 | `indel-distance` | `llev_indel_distance`, `llev_indel_distance_threshold`, `llev_indel_distance_bytes`, `llev_indel_distance_bytes_threshold`, `llev_indel_distance_u64`, `llev_indel_distance_u64_threshold` | project ABI operation |
 | `merge-and-split-distance` | `llev_merge_and_split_distance`, `llev_merge_and_split_distance_threshold`, `llev_merge_and_split_distance_bytes`, `llev_merge_and_split_distance_bytes_threshold`, `llev_merge_and_split_distance_u64`, `llev_merge_and_split_distance_u64_threshold` | standalone merge-and-split distance |
+| `next-batch` | `llev_specialized_cursor_next_batch`, `llev_specialized_cursor_release_batch` | project ABI operation |
 | `PhoneticPattern.accepts` | `llev_phonetic_pattern_matches` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.close` | `llev_phonetic_pattern_free` | compiled phonetic-pattern lifecycle and matching |
 | `PhoneticPattern.new` | `llev_phonetic_pattern_compile_regex`, `llev_phonetic_pattern_compile_llre` | compiled phonetic-pattern lifecycle and matching |
@@ -237,6 +302,9 @@ variants, protocols, or methods.
 | `PhoneticRuleSet.close` | `llev_phonetic_rules_free` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.elems` | `llev_phonetic_rules_len` | phonetic rule-set lifecycle and rewriting |
 | `PhoneticRuleSet.new` | `llev_phonetic_rules_parse`, `llev_phonetic_rules_builtin` | phonetic rule-set lifecycle and rewriting |
+| `query-contextual` | `llev_transducer_query_contextual_utf8` | domain-preserving dictionary query |
+| `query-filtered` | `llev_transducer_query_filtered_utf8` | domain-preserving dictionary query |
+| `query-pruned` | `llev_transducer_query_pruned_utf8` | domain-preserving dictionary query |
 | `QueryCache.clear` | `llev_query_cache_clear` | project ABI operation |
 | `QueryCache.close` | `llev_query_cache_free` | project ABI operation |
 | `QueryCache.new` | `llev_query_cache_new` | project ABI operation |
@@ -245,6 +313,7 @@ variants, protocols, or methods.
 | `QueryCache.stats` | `llev_query_cache_stats` | project ABI operation |
 | `QueryCursor.close` | `llev_query_cursor_free` | streaming result traversal and batch leases |
 | `QueryCursor.next-batch` | `llev_query_cursor_next_batch`, `llev_query_cursor_release_batch` | streaming result traversal and batch leases |
+| `stats` | `llev_specialized_cursor_stats` | project ABI operation |
 | `Transducer.close` | `llev_transducer_free` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.new` | `llev_transducer_new` | transducer lifecycle, snapshot, or domain metadata |
 | `Transducer.query` | `llev_transducer_query_utf8`, `llev_transducer_query_bytes`, `llev_transducer_query_u64`, `llev_transducer_query_pattern` | domain-preserving dictionary query; phonetic-pattern dictionary query |

@@ -10,11 +10,11 @@ use crate::phonetic::nfa::NFAChar;
 #[cfg(feature = "bindings-phonetic")]
 use crate::transducer::language::{LanguageProduct, MappedLanguageQueryIterator};
 use crate::transducer::{
-    AffineGapParams, Algorithm, ContextualCost, ContextualQueryIterator, EditContext,
-    OperationCostsF64, PrefixPruner, PrefixQueryIterator, QueryCacheLimits, QueryCacheStats,
-    QueryIterator, QueryIteratorF64, RankedValueQueryIterator, Suggestion, UnitCandidate,
-    UnitCandidateF64, Unrestricted, ValueFilteredQueryIterator, ValueYieldingQueryIterator,
-    VersionedQueryCache,
+    AffineGapParams, Algorithm, ContextualCost, ContextualQueryIterator, ContextualQueryStats,
+    EditContext, OperationCostsF64, PrefixPruner, PrefixQueryIterator, PrefixQueryStats,
+    QueryCacheLimits, QueryCacheStats, QueryIterator, QueryIteratorF64, RankedValueQueryIterator,
+    Suggestion, UnitCandidate, UnitCandidateF64, Unrestricted, ValueFilteredQueryIterator,
+    ValueYieldingQueryIterator, VersionedQueryCache,
 };
 use arc_swap::ArcSwapOption;
 use libdictenstein::concurrent_slots::{AtomicOnceBox, AtomicTakeBox, HybridOnceBoxSlots};
@@ -2524,6 +2524,15 @@ enum SpecializedCursorInner {
     Prefix(Box<CharPruned>),
 }
 
+/// Work counters from the exact retained specialized traversal.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SpecializedQueryStats {
+    /// Contextual cost traversal counters.
+    Contextual(ContextualQueryStats),
+    /// Prefix-pruned traversal counters.
+    Prefix(PrefixQueryStats),
+}
+
 /// Lazy native specialized traversal over a retained immutable provider.
 pub struct SpecializedQueryCursor {
     inner: SpecializedCursorInner,
@@ -2532,6 +2541,16 @@ pub struct SpecializedQueryCursor {
 }
 
 impl SpecializedQueryCursor {
+    /// Observe exact traversal counters without advancing the cursor.
+    pub fn stats(&self) -> SpecializedQueryStats {
+        match &self.inner {
+            SpecializedCursorInner::Contextual(cursor) => {
+                SpecializedQueryStats::Contextual(cursor.stats())
+            }
+            SpecializedCursorInner::Prefix(cursor) => SpecializedQueryStats::Prefix(cursor.stats()),
+        }
+    }
+
     /// Reuse `output` for at most `maximum` native matches from the captured
     /// dictionary revision; zero is rejected.
     pub fn next_batch(

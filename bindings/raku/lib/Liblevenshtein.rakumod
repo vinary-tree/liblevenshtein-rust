@@ -122,6 +122,48 @@ class RawBatch is repr('CStruct') is export {
     has uint64 $.generation;
 }
 
+class RawSpecializedMatch is repr('CStruct') is export {
+    has Pointer $.term-data;
+    has size_t $.byte-len;
+    has num64 $.cost;
+    has num64 $.score;
+    has uint8 $.has-score;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+    has uint8 $.reserved3;
+    has uint8 $.reserved4;
+    has uint8 $.reserved5;
+    has uint8 $.reserved6;
+}
+
+class RawSpecializedBatch is repr('CStruct') is export {
+    has Pointer $.matches;
+    has size_t $.len;
+    has uint64 $.generation;
+}
+
+class RawSpecializedQueryStats is repr('CStruct') is export {
+    has size_t $.nodes-visited;
+    has size_t $.edges-enumerated;
+    has size_t $.automaton-pruned-subtrees;
+    has size_t $.externally-pruned-subtrees;
+    has size_t $.invalid-costs-rejected;
+}
+
+class RawEditContext is repr('CStruct') is export {
+    has Pointer $.query-units;
+    has size_t $.query-len;
+    has size_t $.query-index;
+    has Pointer $.dictionary-prefix;
+    has size_t $.prefix-len;
+    has uint32 $.dictionary-unit;
+    has uint8 $.has-dictionary-unit;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+}
+
 class RawQueryCacheStats is repr('CStruct') is export {
     has uint64 $.requests;
     has uint64 $.hits;
@@ -358,6 +400,32 @@ sub llev-query-cache-free(Pointer)
 sub llev-transducer-query-utf8(
     Pointer, Pointer, size_t, size_t, uint32, Pointer is rw --> int32
 ) is native(&native-library) is symbol('llev_transducer_query_utf8') { * }
+sub llev-transducer-query-filtered-utf8(
+    Pointer, Pointer, size_t, size_t,
+    &callback (Pointer, uint8, uint64 --> uint8), Pointer,
+    Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_transducer_query_filtered_utf8') { * }
+sub llev-transducer-query-contextual-utf8(
+    Pointer, Pointer, size_t, num64, num64,
+    &callback (Pointer, uint32, Pointer, uint32, uint32 --> num64), Pointer,
+    Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_transducer_query_contextual_utf8') { * }
+sub llev-transducer-query-pruned-utf8(
+    Pointer, Pointer, size_t, size_t,
+    &callback (Pointer, uint32, uint32, uint32, size_t, Pointer,
+        size_t, Pointer --> uint8), Pointer, Pointer is rw --> int32
+) is native(&native-library) is symbol('llev_transducer_query_pruned_utf8') { * }
+sub llev-specialized-cursor-next-batch(Pointer, size_t, RawSpecializedBatch
+    --> int32) is native(&native-library)
+    is symbol('llev_specialized_cursor_next_batch') { * }
+sub llev-specialized-cursor-stats(Pointer, RawSpecializedQueryStats --> int32)
+    is native(&native-library)
+    is symbol('llev_specialized_cursor_stats') { * }
+sub llev-specialized-cursor-release-batch(Pointer, uint64 --> int32)
+    is native(&native-library)
+    is symbol('llev_specialized_cursor_release_batch') { * }
+sub llev-specialized-cursor-free(Pointer --> int32)
+    is native(&native-library) is symbol('llev_specialized_cursor_free') { * }
 sub llev-transducer-query-bytes(
     Pointer, Pointer, size_t, size_t, uint32, Pointer is rw --> int32
 ) is native(&native-library) is symbol('llev_transducer_query_bytes') { * }
@@ -934,8 +1002,17 @@ class QueryCursor does Iterable is export {
     has Pointer $!handle is required;
     has Bool $!closed = False;
     has Bool $!claimed = False;
+    has Mu $!callback-anchor;
+    has Mu $!callback-failure;
+    has Int $!callback-thread = 0;
 
-    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+    submethod BUILD(Pointer:D :$handle!, :$callback-anchor = Nil,
+        :$callback-failure = Nil) {
+        $!handle = $handle;
+        $!callback-anchor = $callback-anchor;
+        $!callback-failure = $callback-failure;
+        $!callback-thread = $*THREAD.id if $callback-anchor.defined;
+    }
 
     method !handle(--> Pointer:D) {
         X::Liblevenshtein.new(
@@ -948,8 +1025,17 @@ class QueryCursor does Iterable is export {
 
     method next-batch(Int:D $maximum = DEFAULT-MATCH-BATCH --> Mu) {
         die 'maximum batch size must be positive' unless $maximum > 0;
+        die 'callback cursor must advance on its creating Raku thread'
+            if $!callback-anchor.defined && $*THREAD.id != $!callback-thread;
         my $view = RawBatch.new;
         my $status = llev-query-cursor-next-batch(self!handle, $maximum, $view);
+        if $!callback-failure.defined {
+            my $failure = $!callback-failure();
+            if $failure.defined {
+                self.close;
+                $failure.rethrow;
+            }
+        }
         return Nil unless check-status($status, 'query-cursor-next-batch', :allow-end);
         my @matches;
         my UInt:D $generation = $view.generation.UInt;
@@ -1012,8 +1098,369 @@ class QueryCursor does Iterable is export {
         check-status(llev-query-cursor-free($!handle), 'query-cursor-free');
         $!handle = Pointer;
         $!closed = True;
+        $!callback-anchor = Nil;
+        $!callback-failure = Nil;
     }
 
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class DistanceRangeCursor does Iterable is export {
+    has QueryCursor:D $!inner is required;
+    has Int:D $.minimum-distance is required;
+    has Int:D $.maximum-distance is required;
+    has Bool $!closed = False;
+    has Bool $!claimed = False;
+
+    submethod BUILD(QueryCursor:D :$inner!, Int:D :$minimum-distance!,
+        Int:D :$maximum-distance!) {
+        $!inner = $inner;
+        $!minimum-distance = $minimum-distance;
+        $!maximum-distance = $maximum-distance;
+    }
+
+    method next-batch(Int:D $maximum = DEFAULT-MATCH-BATCH --> Mu) {
+        die 'maximum batch size must be positive' unless $maximum > 0;
+        die 'distance-range cursor is closed' if $!closed;
+        my @matches;
+        CATCH { default { self.close; .rethrow } }
+        while @matches.elems < $maximum {
+            my $page = $!inner.next-batch(1);
+            unless $page.defined {
+                self.close;
+                last;
+            }
+            my $match = $page[0];
+            next if $match.distance < $!minimum-distance;
+            if $match.distance > $!maximum-distance {
+                self.close;
+                last;
+            }
+            @matches.push($match);
+        }
+        @matches.elems ?? @matches.Array !! Nil
+    }
+
+    method iterator(--> Iterator:D) {
+        die 'distance-range cursor is one-shot' if $!claimed;
+        $!claimed = True;
+        my $cursor = self;
+        class :: does Iterator {
+            has DistanceRangeCursor:D $.cursor is required;
+            method pull-one() {
+                my $page = $!cursor.next-batch(1);
+                $page.defined ?? $page[0] !! IterationEnd
+            }
+            submethod DESTROY { try $!cursor.close }
+        }.new(:$cursor)
+    }
+
+    method Seq(--> Seq:D) { Seq.new(self.iterator) }
+    method list(--> List:D) { self.Seq.list }
+    method reduce-batches(
+        &operation, Mu $initial, Int:D :$batch-size = DEFAULT-MATCH-BATCH --> Mu
+    ) {
+        my $accumulator = $initial;
+        LEAVE self.close;
+        loop {
+            my $batch = self.next-batch($batch-size);
+            last unless $batch.defined;
+            $accumulator = operation($accumulator, $batch);
+        }
+        $accumulator
+    }
+    method close(--> Nil) {
+        return if $!closed;
+        $!closed = True;
+        $!inner.close;
+    }
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class ScoredMatch is export {
+    has Str:D $.term is required;
+    has Int:D $.distance is required;
+    has Mu $.id;
+    has Num:D $.confidence is required;
+}
+
+class ScoredCursor does Iterable is export {
+    has QueryCursor:D $!inner is required;
+    has Callable:D $!scorer is required;
+    has @!layer;
+    has Int $!offset = 0;
+    has Mu $!lookahead;
+    has Bool $!closed = False;
+    has Bool $!claimed = False;
+
+    submethod BUILD(QueryCursor:D :$inner!, Callable:D :$scorer!) {
+        $!inner = $inner;
+        $!scorer = $scorer;
+    }
+
+    method !next-match(--> Mu) {
+        my $page = $!inner.next-batch(1);
+        $page.defined ?? $page[0] !! Nil
+    }
+
+    method !fill-layer(--> Bool:D) {
+        my $match = $!lookahead.defined ?? $!lookahead !! self!next-match;
+        $!lookahead = Nil;
+        return False unless $match.defined;
+        my Int:D $distance = $match.distance;
+        @!layer = ();
+        loop {
+            my Num:D $score = $!scorer($match.term, $match.distance,
+                $match.id).Num;
+            $score = -Inf if $score.isNaN || $score == Inf || $score == -Inf;
+            @!layer.push(ScoredMatch.new(
+                term => $match.term, :$distance, id => $match.id,
+                confidence => $score,
+            ));
+            $match = self!next-match;
+            last unless $match.defined;
+            if $match.distance != $distance {
+                $!lookahead = $match;
+                last;
+            }
+        }
+        @!layer = @!layer.sort({
+            ($^b.confidence <=> $^a.confidence) || ($^a.term cmp $^b.term)
+        });
+        $!offset = 0;
+        True
+    }
+
+    method next-batch(Int:D $maximum = DEFAULT-MATCH-BATCH --> Mu) {
+        die 'maximum batch size must be positive' unless $maximum > 0;
+        die 'scored cursor is closed' if $!closed;
+        my @matches;
+        CATCH { default { self.close; .rethrow } }
+        while @matches.elems < $maximum {
+            if $!offset >= @!layer.elems {
+                unless self!fill-layer {
+                    self.close;
+                    last;
+                }
+            }
+            @matches.push(@!layer[$!offset++]);
+        }
+        @matches.elems ?? @matches.Array !! Nil
+    }
+
+    method iterator(--> Iterator:D) {
+        die 'scored cursor is one-shot' if $!claimed;
+        $!claimed = True;
+        my $cursor = self;
+        class :: does Iterator {
+            has ScoredCursor:D $.cursor is required;
+            method pull-one() {
+                my $page = $!cursor.next-batch(1);
+                $page.defined ?? $page[0] !! IterationEnd
+            }
+            submethod DESTROY { try $!cursor.close }
+        }.new(:$cursor)
+    }
+
+    method Seq(--> Seq:D) { Seq.new(self.iterator) }
+    method list(--> List:D) { self.Seq.list }
+    method reduce-batches(
+        &operation, Mu $initial, Int:D :$batch-size = DEFAULT-MATCH-BATCH --> Mu
+    ) {
+        my $accumulator = $initial;
+        LEAVE self.close;
+        loop {
+            my $batch = self.next-batch($batch-size);
+            last unless $batch.defined;
+            $accumulator = operation($accumulator, $batch);
+        }
+        $accumulator
+    }
+    method close(--> Nil) {
+        return if $!closed;
+        $!closed = True;
+        @!layer = ();
+        $!lookahead = Nil;
+        $!inner.close;
+    }
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class SpecializedMatch is export {
+    has Str:D $.term is required;
+    has Num:D $.cost is required;
+    has Mu $.score;
+}
+
+class SpecializedQueryStats is export {
+    has Int:D $.nodes-visited is required;
+    has Int:D $.edges-enumerated is required;
+    has Int:D $.automaton-pruned-subtrees is required;
+    has Int:D $.externally-pruned-subtrees is required;
+    has Int:D $.invalid-costs-rejected is required;
+}
+
+class ContextualCosts is export {
+    has Callable:D $.substitution is required;
+    has Callable:D $.insertion is required;
+    has Callable:D $.deletion is required;
+    has Num:D $.minimum-nonzero-cost is required;
+}
+
+class ContextualEditContext is export {
+    has Str:D $.query is required;
+    has Int:D $.query-index is required;
+    has Str:D $.dictionary-prefix is required;
+    has Mu $.dictionary-unit;
+}
+
+class PrefixVisitor is export {
+    has Callable:D $.enter is required;
+    has Callable:D $.leave is required;
+    has Callable:D $.matches = -> $candidate, $query {
+        $candidate eq $query
+    };
+    has Callable:D $.permits = -> $prefix { True };
+    has Callable:D $.score = -> $prefix { Nil };
+}
+
+sub copied-scalar-text(Pointer $source, Int:D $length --> Str:D) {
+    return '' if $length == 0;
+    die 'native scalar pointer is null for nonempty text' unless $source.defined;
+    my $units = nativecast(CArray[uint32], $source);
+    (0 ..^ $length).map({ chr($units[$_].Int) }).join
+}
+
+sub materialize-specialized(RawSpecializedMatch:D $raw
+    --> SpecializedMatch:D) {
+    my $bytes = buf8.allocate($raw.byte-len);
+    memcpy(raw-pointer($bytes), $raw.term-data, $raw.byte-len)
+        if $raw.byte-len;
+    SpecializedMatch.new(term => $bytes.decode('utf8'),
+        cost => $raw.cost.Num,
+        score => ($raw.has-score ?? $raw.score.Num !! Nil))
+}
+
+class SpecializedCursor does Iterable is export {
+    has Pointer $!handle is required;
+    has Callable:D $!callback-anchor is required;
+    has Callable:D $!callback-failure is required;
+    has Int $!owner-thread;
+    has Bool $!closed = False;
+    has Bool $!claimed = False;
+
+    submethod BUILD(Pointer:D :$handle!, Callable:D :$callback-anchor!,
+        Callable:D :$callback-failure!) {
+        $!handle = $handle;
+        $!callback-anchor = $callback-anchor;
+        $!callback-failure = $callback-failure;
+        $!owner-thread = $*THREAD.id;
+    }
+
+    method stats(--> SpecializedQueryStats:D) {
+        die 'specialized cursor is closed' if $!closed;
+        die 'callback cursor must be inspected on its creating Raku thread'
+            if $*THREAD.id != $!owner-thread;
+        my $raw = RawSpecializedQueryStats.new;
+        check-status(llev-specialized-cursor-stats($!handle, $raw),
+            'specialized-cursor-stats');
+        SpecializedQueryStats.new(
+            nodes-visited => $raw.nodes-visited.Int,
+            edges-enumerated => $raw.edges-enumerated.Int,
+            automaton-pruned-subtrees =>
+                $raw.automaton-pruned-subtrees.Int,
+            externally-pruned-subtrees =>
+                $raw.externally-pruned-subtrees.Int,
+            invalid-costs-rejected => $raw.invalid-costs-rejected.Int,
+        )
+    }
+
+    method next-batch(Int:D $maximum = DEFAULT-MATCH-BATCH --> Mu) {
+        die 'maximum batch size must be positive' unless $maximum > 0;
+        die 'specialized cursor is closed' if $!closed;
+        die 'callback cursor must advance on its creating Raku thread'
+            if $*THREAD.id != $!owner-thread;
+        my $view = RawSpecializedBatch.new;
+        my $status = llev-specialized-cursor-next-batch(
+            $!handle, $maximum, $view);
+        my $callback-fault = $!callback-failure();
+        if $callback-fault.defined {
+            try self.close;
+            $callback-fault.rethrow;
+        }
+        return Nil unless check-status($status,
+            'specialized-cursor-next-batch', :allow-end);
+        my @matches;
+        my $failure;
+        try {
+            for 0 ..^ $view.len -> $index {
+                my $address = Pointer.new($view.matches.Int +
+                    $index * nativesizeof(RawSpecializedMatch));
+                @matches.push(materialize-specialized(
+                    copy-cstruct(RawSpecializedMatch, $address)));
+            }
+            CATCH { default { $failure = $_ } }
+        }
+        my $release-status = llev-specialized-cursor-release-batch(
+            $!handle, $view.generation.UInt);
+        if $failure.defined {
+            try self.close;
+            $failure.rethrow;
+        }
+        check-status($release-status, 'specialized-cursor-release-batch');
+        @matches.Array
+    }
+
+    method iterator(--> Iterator:D) {
+        die 'specialized cursor is one-shot' if $!claimed;
+        $!claimed = True;
+        my $cursor = self;
+        class :: does Iterator {
+            has SpecializedCursor:D $.cursor is required;
+            has @.pending is rw;
+            method pull-one() {
+                if @!pending.elems == 0 {
+                    my $batch = $!cursor.next-batch;
+                    unless $batch.defined {
+                        $!cursor.close;
+                        return IterationEnd;
+                    }
+                    @!pending = $batch.list;
+                }
+                @!pending.shift
+            }
+            submethod DESTROY { try $!cursor.close }
+        }.new(:$cursor)
+    }
+
+    method Seq(--> Seq:D) { Seq.new(self.iterator) }
+    method list(--> List:D) { self.Seq.list }
+    method reduce-batches(
+        &operation, Mu $initial, Int:D :$batch-size = DEFAULT-MATCH-BATCH --> Mu
+    ) {
+        my $accumulator = $initial;
+        LEAVE self.close;
+        loop {
+            my $batch = self.next-batch($batch-size);
+            last unless $batch.defined;
+            $accumulator = operation($accumulator, $batch);
+        }
+        $accumulator
+    }
+    method close(--> Nil) {
+        return if $!closed;
+        die 'callback cursor must close on its creating Raku thread'
+            if $*THREAD.id != $!owner-thread;
+        check-status(llev-specialized-cursor-free($!handle),
+            'specialized-cursor-free');
+        $!handle = Pointer;
+        $!closed = True;
+        my $failure = $!callback-failure();
+        $failure.rethrow if $failure.defined;
+    }
     method opened(--> Bool:D) { !$!closed }
     submethod DESTROY { try self.close }
 }
@@ -1178,6 +1625,186 @@ class Transducer is export {
             self!handle, $pattern.native-handle, $maximum-distance, $output,
         ), 'transducer-query-pattern');
         QueryCursor.new(handle => $output)
+    }
+
+    method query-ranked(Str:D $input, Int:D $maximum-distance
+    --> QueryCursor:D) {
+        self.query($input, $maximum-distance, order => DISTANCE-THEN-TERM)
+    }
+
+    method query-filtered(Str:D $input, Int:D $maximum-distance,
+        Callable:D $predicate --> QueryCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
+        my $bytes = byte-argument($input.encode('utf8'));
+        my $failure;
+        my &bridge = -> Pointer $context, uint8 $has-id, uint64 $id
+            --> uint8 {
+            if $failure.defined {
+                2
+            } else {
+                my uint8 $answer = 2;
+                try {
+                    CATCH { default { $failure = $_ } }
+                    $answer = $predicate($has-id != 0 ?? $id.UInt !! Nil)
+                        ?? 1 !! 0;
+                }
+                $failure.defined ?? 2 !! $answer
+            }
+        };
+        my Pointer $output .= new;
+        check-status(llev-transducer-query-filtered-utf8(
+            self!handle, $bytes.pointer, $bytes.length, $maximum-distance,
+            &bridge, Pointer, $output,
+        ), 'transducer-query-filtered-utf8');
+        QueryCursor.new(handle => $output, callback-anchor => &bridge,
+            callback-failure => { $failure })
+    }
+
+    method query-contextual(Str:D $input, Real:D $maximum-cost,
+        ContextualCosts:D $costs --> SpecializedCursor:D) {
+        my Num:D $limit = $maximum-cost.Num;
+        my Num:D $minimum = $costs.minimum-nonzero-cost;
+        die 'maximum contextual cost must be finite and nonnegative'
+            if $limit.isNaN || $limit == Inf || $limit == -Inf || $limit < 0;
+        die 'minimum nonzero cost must be finite and positive'
+            if $minimum.isNaN || $minimum == Inf || $minimum == -Inf ||
+                $minimum <= 0;
+        my $bytes = byte-argument($input.encode('utf8'));
+        my $failure;
+        my &bridge = -> Pointer $opaque, uint32 $operation, Pointer $view-ptr,
+            uint32 $query-unit, uint32 $candidate-unit --> num64 {
+            if $failure.defined {
+                NaN
+            } else {
+                my num64 $answer = NaN;
+                try {
+                    CATCH { default { $failure = $_ } }
+                    my $raw = nativecast(RawEditContext, $view-ptr);
+                    my $context = ContextualEditContext.new(
+                        query => copied-scalar-text($raw.query-units,
+                            $raw.query-len.Int),
+                        query-index => $raw.query-index.Int + 1,
+                        dictionary-prefix => copied-scalar-text(
+                            $raw.dictionary-prefix, $raw.prefix-len.Int),
+                        dictionary-unit => ($raw.has-dictionary-unit
+                            ?? chr($raw.dictionary-unit.Int) !! Nil),
+                    );
+                    my $value = do given $operation {
+                        when 0 {
+                            my $callback = $costs.substitution;
+                            $callback($context, chr($query-unit), chr($candidate-unit))
+                        }
+                        when 1 {
+                            my $callback = $costs.insertion;
+                            $callback($context, chr($candidate-unit))
+                        }
+                        when 2 {
+                            my $callback = $costs.deletion;
+                            $callback($context, chr($query-unit))
+                        }
+                        default { die 'unknown native contextual operation' }
+                    };
+                    $answer = $value.defined ?? $value.Num !! NaN;
+                }
+                $failure.defined ?? NaN !! $answer
+            }
+        };
+        my Pointer $output .= new;
+        my $status = llev-transducer-query-contextual-utf8(
+            self!handle, $bytes.pointer, $bytes.length, $limit, $minimum,
+            &bridge, Pointer, $output,
+        );
+        if $failure.defined {
+            llev-specialized-cursor-free($output) if $output.defined;
+            $failure.rethrow;
+        }
+        check-status($status, 'transducer-query-contextual-utf8');
+        SpecializedCursor.new(handle => $output, callback-anchor => &bridge,
+            callback-failure => { $failure })
+    }
+
+    method query-pruned(Str:D $input, Int:D $maximum-distance,
+        PrefixVisitor:D $visitor --> SpecializedCursor:D) {
+        die 'maximum distance must be nonnegative' if $maximum-distance < 0;
+        my $bytes = byte-argument($input.encode('utf8'));
+        my $failure;
+        my &bridge = -> Pointer $opaque, uint32 $operation,
+            uint32 $candidate-unit, uint32 $query-unit, size_t $depth,
+            Pointer $prefix-ptr, size_t $prefix-len, Pointer $out-score
+            --> uint8 {
+            if $failure.defined && $operation != 2 {
+                0
+            } else {
+                my uint8 $answer = 0;
+                try {
+                    CATCH { default { $failure //= $_ } }
+                    given $operation {
+                        when 0 {
+                            my $callback = $visitor.matches;
+                            $answer = $callback(chr($candidate-unit),
+                                chr($query-unit)) ?? 1 !! 0;
+                        }
+                        when 1 {
+                            my $callback = $visitor.enter;
+                            $answer = $callback(chr($candidate-unit),
+                                $depth.Int) ?? 1 !! 0;
+                        }
+                        when 2 {
+                            my $callback = $visitor.leave;
+                            $callback(chr($candidate-unit), $depth.Int);
+                        }
+                        when 3 | 4 {
+                            my $prefix = copied-scalar-text($prefix-ptr,
+                                $prefix-len.Int);
+                            if $operation == 3 {
+                                my $callback = $visitor.permits;
+                                $answer = $callback($prefix) ?? 1 !! 0;
+                            } else {
+                                my $callback = $visitor.score;
+                                my $score = $callback($prefix);
+                                if $score.defined {
+                                    nativecast(CArray[num64], $out-score)[0] =
+                                        $score.Num;
+                                    $answer = 1;
+                                }
+                            }
+                        }
+                        default { die 'unknown native prefix operation' }
+                    }
+                }
+                $failure.defined ?? 0 !! $answer
+            }
+        };
+        my Pointer $output .= new;
+        my $status = llev-transducer-query-pruned-utf8(
+            self!handle, $bytes.pointer, $bytes.length, $maximum-distance,
+            &bridge, Pointer, $output,
+        );
+        if $failure.defined {
+            llev-specialized-cursor-free($output) if $output.defined;
+            $failure.rethrow;
+        }
+        check-status($status, 'transducer-query-pruned-utf8');
+        SpecializedCursor.new(handle => $output, callback-anchor => &bridge,
+            callback-failure => { $failure })
+    }
+
+    method query-mode(Str:D $input, Int:D :$minimum-distance = 0,
+        Int:D :$maximum-distance! --> DistanceRangeCursor:D) {
+        die 'distance interval must be ordered and nonnegative'
+            unless 0 <= $minimum-distance <= $maximum-distance;
+        DistanceRangeCursor.new(
+            inner => self.query-ranked($input, $maximum-distance),
+            :$minimum-distance, :$maximum-distance,
+        )
+    }
+
+    method query-suggestions(Str:D $input, Int:D $maximum-distance,
+        Callable:D $scorer --> ScoredCursor:D) {
+        ScoredCursor.new(
+            inner => self.query-ranked($input, $maximum-distance),
+            :$scorer,
+        )
     }
 
     method close(--> Nil) {

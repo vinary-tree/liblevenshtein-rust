@@ -260,7 +260,7 @@
   },
   "packageVersion": "4.0.0-rc.6",
   "abiVersion": 1,
-  "apiRevision": 10,
+  "apiRevision": 11,
   "defaultMatchBatch": 256,
   "snapshot": {
     "boundary": "query-start",
@@ -816,6 +816,10 @@
     },
     {
       "name": "llev_specialized_cursor_next_batch",
+      "rustModule": "specialized"
+    },
+    {
+      "name": "llev_specialized_cursor_stats",
       "rustModule": "specialized"
     },
     {

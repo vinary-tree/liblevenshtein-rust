@@ -186,6 +186,17 @@ fn contextual_query_checks_costs_leases_and_snapshot() {
         .unwrap()
         .to_owned();
         let first_cost = first_item.cost;
+        let mut stats = LlevSpecializedQueryStats::default();
+        assert_eq!(
+            llev_specialized_cursor_stats(cursor, &mut stats),
+            LlevStatus::Ok
+        );
+        assert!(stats.nodes_visited > 0);
+        assert_eq!(stats.externally_pruned_subtrees, 0);
+        assert_eq!(
+            llev_specialized_cursor_stats(cursor, ptr::null_mut()),
+            LlevStatus::NullPointer
+        );
         let mut blocked = LlevSpecializedBatchView::default();
         assert_eq!(
             llev_specialized_cursor_next_batch(cursor, 1, &mut blocked),
@@ -297,6 +308,14 @@ fn prefix_pruner_balances_enter_leave_on_early_close() {
         );
         let matches = collect(cursor, 1);
         assert_eq!(matches, [("ce".into(), 0.0, Some(2.0))]);
+        let mut stats = LlevSpecializedQueryStats::default();
+        assert_eq!(
+            llev_specialized_cursor_stats(cursor, &mut stats),
+            LlevStatus::Ok
+        );
+        assert!(stats.nodes_visited > 0);
+        assert!(stats.externally_pruned_subtrees > 0);
+        assert_eq!(stats.invalid_costs_rejected, 0);
         assert_eq!(llev_specialized_cursor_free(cursor), LlevStatus::Ok);
         assert!(state.stack.is_empty());
         assert_eq!(state.entered, state.left);

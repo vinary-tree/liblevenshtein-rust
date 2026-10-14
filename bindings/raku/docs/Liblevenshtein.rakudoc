@@ -17,6 +17,57 @@ C<QueryCursor> over the immutable revision captured at query start. Iterate
 the cursor for owned C<Match> values or call C<reduce-batches> for bounded
 batch processing.
 
+=head1 Ranked, filtered, and specialized traversal
+
+C<query-ranked($text, $maximum-distance)> uses native distance-then-term
+order, with one distance layer buffered at a time. C<query-mode> restricts
+the inclusive minimum/maximum distance interval. C<query-suggestions>
+invokes a host scorer with C<(term, distance, optional-id)> and sorts only
+the current distance layer by descending finite score then term. A non-finite
+score ranks last. These adapters return owned matches, support bounded
+C<next-batch>, and close their native cursor on exhaustion or explicit
+C<close>.
+
+C<query-filtered($text, $maximum-distance, &predicate)> calls the predicate
+with an optional unsigned dictionary ID at an accepted final node, before
+the native library constructs the term. C<Nil> is a valueless present entry.
+The predicate returns a truthy value to retain the match.
+The ordinary C<query> yields owned terms with optional dictionary IDs. A
+C<PhoneticPattern> argument selects the native dictionary-by-language product
+traversal when the phonetic feature is built.
+
+C<query-contextual($text, $maximum-cost, $costs)> accepts
+C<ContextualCosts.new(:substitution(...), :insertion(...), :deletion(...),
+:minimum-nonzero-cost(...))>. A substitution receives
+C<(ContextualEditContext, query-scalar, dictionary-scalar)>; insertion gets
+context and dictionary scalar; deletion gets context and query scalar.
+The context reports the complete query, one-based query index, traversed
+dictionary prefix, and optional current dictionary scalar. C<Nil> forbids an
+edit. Every allowed positive cost must meet the finite, strictly positive
+declared lower bound; native validation rejects a violated bound.
+
+C<query-pruned($text, $maximum-distance, $visitor)> accepts a
+C<PrefixVisitor> with required C<enter(unit, depth)> and C<leave(unit,
+depth)> callables. Optional C<matches(candidate, query)> defaults to exact
+equality, C<permits(prefix)> defaults to true, and C<score(prefix)> defaults
+to C<Nil>. Enter and leave are balanced even on early cursor close.
+The native prefix DFS returns dictionary traversal order. Its
+C<SpecializedMatch> carries C<term>, C<cost>, and optional C<score>.
+While open, C<SpecializedCursor.stats> copies C<nodes-visited>,
+C<edges-enumerated>, C<automaton-pruned-subtrees>,
+C<externally-pruned-subtrees>, and C<invalid-costs-rejected> without moving
+the cursor. Non-applicable counters are zero. These APIs require additive
+native API revision 11.
+Every traversal cursor offers C<reduce-batches> over bounded owned pages;
+the reducer closes its cursor even if the host operation throws.
+
+NativeCall invokes each callback synchronously on the Raku thread advancing
+the cursor. The binding retains callback closures until native close, rejects
+advancing or closing a specialized cursor on another Raku thread, catches
+callback exceptions before returning to C, and rethrows them after the call.
+The context and prefix arguments are copied Raku values. C<close> a cursor
+when stopping early; C<DESTROY> is only a leak-containment fallback.
+
 =head1 Bounded repeated-query caching
 
 C<QueryCache.new(:$transducer, :max-entries(1024),
@@ -136,6 +187,19 @@ selection knob because those kernels preserve the same metric semantics.
 
 Configure an algorithm over a retained provider and traverse owned results in
 bounded batches.
+
+=item C<DistanceRangeCursor>, C<ScoredCursor>, C<ScoredMatch>
+
+Layer-bounded ranked adapters with explicit early close.
+
+=item C<ContextualCosts>, C<ContextualEditContext>, C<PrefixVisitor>
+
+Host callback configuration for native contextual and balanced prefix walks.
+
+=item C<SpecializedCursor>, C<SpecializedMatch>, C<SpecializedQueryStats>
+
+Bounded generation-checked contextual/prefix results and exact native work
+counters.
 
 =item C<QueryCache>, C<QueryCacheStats>
 

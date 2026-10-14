@@ -15,7 +15,7 @@
 /** Binary ABI generation implemented by this header and library. */
 #define LLEV_ABI_VERSION 1u
 /** Additive API revision within LLEV_ABI_VERSION. */
-#define LLEV_API_REVISION 10u
+#define LLEV_API_REVISION 11u
 /** Default maximum descriptors borrowed by one cursor batch. */
 #define LLEV_DEFAULT_MATCH_BATCH 256u
 
@@ -271,6 +271,18 @@ typedef struct LlevSpecializedBatchView {
     size_t len; /**< Descriptor count. */
     uint64_t generation; /**< Exact release token. */
 } LlevSpecializedBatchView;
+
+/** Exact counters from one retained contextual or prefix-pruned query.
+ * Contextual subtree pruning maps to automaton_pruned_subtrees;
+ * prefix visitor rejection maps to externally_pruned_subtrees.
+ */
+typedef struct LlevSpecializedQueryStats {
+    size_t nodes_visited;
+    size_t edges_enumerated;
+    size_t automaton_pruned_subtrees;
+    size_t externally_pruned_subtrees;
+    size_t invalid_costs_rejected;
+} LlevSpecializedQueryStats;
 
 /** Specialized reducer callback; borrowed descriptors expire on return. */
 typedef LlevStatus (*LlevSpecializedBatchReducer)(void* context,

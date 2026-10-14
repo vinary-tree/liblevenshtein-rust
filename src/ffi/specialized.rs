@@ -4,7 +4,7 @@ use super::generated::LlevStatus;
 use super::index::{binding, boundary, utf8, LlevTransducer};
 use crate::bindings::{
     CallbackContextualCost, CallbackPrefixPruner, ContextualCostCallback, PrefixCallback,
-    SpecializedMatch, SpecializedQueryCursor,
+    SpecializedMatch, SpecializedQueryCursor, SpecializedQueryStats,
 };
 use std::ffi::{c_char, c_void};
 use std::ptr;
@@ -41,6 +41,59 @@ pub struct LlevSpecializedBatchView {
     pub len: usize,
     /// Nonzero generation token required for release.
     pub generation: u64,
+}
+
+/// Exact work counters for one contextual or prefix-pruned query revision.
+#[repr(C)]
+#[derive(Clone, Copy, Default)]
+pub struct LlevSpecializedQueryStats {
+    /// Dictionary nodes inspected.
+    pub nodes_visited: usize,
+    /// Outgoing edges considered.
+    pub edges_enumerated: usize,
+    /// Subtrees rejected by automaton state or contextual cost.
+    pub automaton_pruned_subtrees: usize,
+    /// Subtrees rejected by the host prefix visitor.
+    pub externally_pruned_subtrees: usize,
+    /// Non-finite or negative contextual costs treated as forbidden.
+    pub invalid_costs_rejected: usize,
+}
+
+/// Copy current traversal counters without advancing or leasing the cursor.
+///
+/// # Safety
+/// `cursor` and `out_stats` must be readable/writable respectively.
+#[no_mangle]
+pub unsafe extern "C" fn llev_specialized_cursor_stats(
+    cursor: *const LlevSpecializedCursor,
+    out_stats: *mut LlevSpecializedQueryStats,
+) -> LlevStatus {
+    boundary(|| {
+        let cursor = cursor
+            .as_ref()
+            .ok_or((LlevStatus::NullPointer, "cursor is null".into()))?;
+        if out_stats.is_null() {
+            return Err((LlevStatus::NullPointer, "out_stats is null".into()));
+        }
+        let stats = match cursor.inner.stats() {
+            SpecializedQueryStats::Contextual(stats) => LlevSpecializedQueryStats {
+                nodes_visited: stats.nodes_visited,
+                edges_enumerated: stats.edges_enumerated,
+                automaton_pruned_subtrees: stats.subtrees_pruned,
+                externally_pruned_subtrees: 0,
+                invalid_costs_rejected: stats.invalid_costs_rejected,
+            },
+            SpecializedQueryStats::Prefix(stats) => LlevSpecializedQueryStats {
+                nodes_visited: stats.nodes_visited,
+                edges_enumerated: stats.edges_enumerated,
+                automaton_pruned_subtrees: stats.automaton_pruned_subtrees,
+                externally_pruned_subtrees: stats.externally_pruned_subtrees,
+                invalid_costs_rejected: 0,
+            },
+        };
+        out_stats.write(stats);
+        Ok(LlevStatus::Ok)
+    })
 }
 
 impl Default for LlevSpecializedBatchView {

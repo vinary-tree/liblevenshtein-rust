@@ -552,6 +552,10 @@ LLEV_API LlevStatus llev_specialized_cursor_next_batch(
     LlevSpecializedCursor* cursor,
     size_t maximum,
     LlevSpecializedBatchView* out_batch);
+/** Copy exact query work counters without advancing the cursor. */
+LLEV_API LlevStatus llev_specialized_cursor_stats(
+    const LlevSpecializedCursor* cursor,
+    LlevSpecializedQueryStats* out_stats);
 /** Release the exact live specialized batch generation. */
 LLEV_API LlevStatus llev_specialized_cursor_release_batch(
     LlevSpecializedCursor* cursor,

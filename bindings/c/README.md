@@ -206,6 +206,7 @@ variants, protocols, or methods.
 | `llev_specialized_cursor_next_batch` | `llev_specialized_cursor_next_batch` | project ABI operation |
 | `llev_specialized_cursor_reduce` | `llev_specialized_cursor_reduce` | project ABI operation |
 | `llev_specialized_cursor_release_batch` | `llev_specialized_cursor_release_batch` | project ABI operation |
+| `llev_specialized_cursor_stats` | `llev_specialized_cursor_stats` | project ABI operation |
 | `llev_string_array_free` | `llev_string_array_free` | legacy owned-string plumbing |
 | `llev_string_dup` | `llev_string_dup` | legacy owned-string plumbing |
 | `llev_string_free` | `llev_string_free` | legacy owned-string plumbing |

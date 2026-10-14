@@ -20,6 +20,8 @@ isa-ok (ENGLISH-ORTHOGRAPHY), PhoneticRuleSetKind,
 is nativesizeof(RawMatch), 48, 'match layout matches LP64 C';
 is nativesizeof(RawBatch), 24, 'batch layout matches LP64 C';
 is nativesizeof(RawQueryCacheStats), 64, 'query-cache stats layout matches LP64 C';
+is nativesizeof(RawSpecializedQueryStats), 40,
+    'specialized query stats layout matches LP64 C';
 is nativesizeof(OwnedString), 16, 'owned string layout matches LP64 C';
 
 is distance('kitten', 'sitting'), 3, 'standard distance';
@@ -187,6 +189,122 @@ is-deeply @matches.map({ [.term, .distance] }).Array,
 is @matches[0].id, 7, 'present dictionary ID is preserved';
 ok !@matches[1].id.defined, 'absent dictionary ID remains undefined';
 
+is-deeply $transducer.query-ranked('cut', 1).map(*.term).Array,
+    ['cat', 'cot'], 'ranked traversal streams native distance-then-term order';
+is-deeply $transducer.query-mode('cut',
+    minimum-distance => 1, maximum-distance => 1).map(*.term).Array,
+    ['cat', 'cot'], 'inclusive exact-distance mode retains both candidates';
+is $transducer.query-mode('cut', maximum-distance => 0).list.elems, 0,
+    'exact mode excludes above-bound terms in the native automaton';
+throws-like {
+    $transducer.query-mode('cut',
+        minimum-distance => 2, maximum-distance => 1)
+}, X::AdHoc, 'unordered distance interval fails before native traversal';
+my $scored = $transducer.query-suggestions('cut', 1,
+    -> $term, $distance, $id { $term eq 'cot' ?? 10e0 !! 0e0 });
+is-deeply $scored.map(*.term).Array, ['cot', 'cat'],
+    'host scorer sorts only within one native distance layer';
+my $early-ranked = $transducer.query-mode('cut', maximum-distance => 1);
+is $early-ranked.next-batch(1).elems, 1,
+    'ranked mode returns bounded owned batches';
+$early-ranked.close;
+nok $early-ranked.opened, 'early close releases ranked native cursor';
+my $bad-scorer = $transducer.query-suggestions('cut', 1,
+    -> $term, $distance, $id { die 'host scorer failed' });
+dies-ok { $bad-scorer.next-batch(1) },
+    'host scorer exception stays in Raku';
+nok $bad-scorer.opened, 'host scorer failure closes the native cursor';
+my @filtered = $transducer.query-filtered('cut', 1,
+    -> $id { !$id.defined }).map(*.term).Array;
+is-deeply @filtered, ['cot'],
+    'native value filter rejects a final node before term materialization';
+my $bad-filter = $transducer.query-filtered('cut', 1,
+    -> $id { die 'filter failed' });
+dies-ok { $bad-filter.next-batch(1) },
+    'NativeCall callback exceptions are contained and rethrown in Raku';
+nok $bad-filter.opened, 'callback failure closes the native cursor';
+my $uniform-costs = ContextualCosts.new(
+    substitution => -> $context, $query, $dictionary {
+        $query eq $dictionary ?? 0e0 !! 1e0
+    },
+    insertion => -> $context, $dictionary { 1e0 },
+    deletion => -> $context, $query { 1e0 },
+    minimum-nonzero-cost => 1e0,
+);
+is-deeply $transducer.query-contextual('cut', 1e0, $uniform-costs)
+    .map(*.term).Array.sort.Array, ['cat', 'cot'],
+    'contextual NativeCall costs recover exact unit-cost Rust traversal';
+is $transducer.query-contextual('cut', 1e0, $uniform-costs)
+    .reduce-batches(-> $count, $batch { $count + $batch.elems },
+        0, batch-size => 1), 2,
+    'specialized cursor reduces bounded pages and closes';
+my $bad-contextual = $transducer.query-contextual('cut', 1e0,
+    ContextualCosts.new(
+        substitution => -> $context, $query, $dictionary {
+            die 'contextual cost failed'
+        },
+        insertion => -> $context, $dictionary { 1e0 },
+        deletion => -> $context, $query { 1e0 },
+        minimum-nonzero-cost => 1e0,
+    ));
+dies-ok { $bad-contextual.next-batch(1) },
+    'contextual callback failure is rethrown after returning from native code';
+nok $bad-contextual.opened, 'contextual callback failure closes its cursor';
+for <cat cut dog é> -> $query {
+    for 0..2 -> $limit {
+        my @native = $transducer.query($query, $limit)
+            .map({ [.term, .distance] }).Array.sort({ $^a[0] cmp $^b[0] });
+        my @contextual = $transducer.query-contextual(
+            $query, $limit.Num, $uniform-costs,
+        ).map({ [.term, .cost.Int] }).Array.sort({ $^a[0] cmp $^b[0] });
+        my @pruned = $transducer.query-pruned($query, $limit,
+            PrefixVisitor.new(
+                enter => -> $unit, $depth { True },
+                leave => -> $unit, $depth { },
+            ),
+        ).map({ [.term, .cost.Int] }).Array.sort({ $^a[0] cmp $^b[0] });
+        is-deeply @contextual, @native,
+            'uniform contextual callback agrees with native Rust query';
+        is-deeply @pruned, @native,
+            'unpruned prefix visitor agrees with native Rust query';
+    }
+}
+my @entered;
+my @left;
+my $visitor = PrefixVisitor.new(
+    enter => -> $unit, $depth { @entered.push([$unit, $depth]); True },
+    leave => -> $unit, $depth { @left.push([$unit, $depth]) },
+    permits => -> $prefix { $prefix ne 'cat' },
+    score => -> $prefix { $prefix.chars.Num },
+);
+my $prefix-cursor = $transducer.query-pruned('cut', 1, $visitor);
+my @prefix-matches = $prefix-cursor.list;
+is-deeply @prefix-matches.map(*.term).Array, ['cot'],
+    'prefix visitor rejects cat while retaining cot';
+is @prefix-matches[0].score, 3e0,
+    'prefix score is copied from the synchronous callback';
+is @entered.elems, @left.elems,
+    'native DFS balances enter and leave on exhaustion';
+my $early-prefix = $transducer.query-pruned('cut', 1,
+    PrefixVisitor.new(
+        enter => -> $unit, $depth { @entered.push([$unit, $depth]); True },
+        leave => -> $unit, $depth { @left.push([$unit, $depth]) },
+    ));
+$early-prefix.next-batch(1);
+ok $early-prefix.stats.nodes-visited > 0,
+    'prefix query exposes exact native traversal counters';
+$early-prefix.close;
+is @entered.elems, @left.elems,
+    'early close unwinds every entered native prefix';
+my $bad-prefix = $transducer.query-pruned('cut', 1,
+    PrefixVisitor.new(
+        enter => -> $unit, $depth { die 'prefix failed' },
+        leave => -> $unit, $depth { },
+    ));
+dies-ok { $bad-prefix.next-batch(1) },
+    'prefix callback failure is rethrown after returning from native code';
+nok $bad-prefix.opened, 'prefix callback failure closes its cursor';
+
 my $batch-cursor = $transducer.query('cut', 1);
 isa-ok $batch-cursor, QueryCursor, 'queries return the public iterator type';
 is $batch-cursor.next-batch(1).elems, 1,
@@ -230,6 +348,12 @@ ok query-terms(DAMERAU-LEVENSHTEIN, 'CA', 2).grep(* eq 'ABC'),
     'unrestricted Damerau-Levenshtein composes edits through history';
 nok query-terms(TRANSPOSITION, 'CA', 2).grep(* eq 'ABC'),
     'optimal string alignment remains distinct from unrestricted Damerau';
+if build-features() +& BUILD-FEATURE-PHONETIC {
+    my $language = PhoneticPattern.new(regex => 'cat');
+    is-deeply $transducer.query($language, 0).map(*.term).Array,
+        ['cat'], 'typed language-product query uses native traversal';
+    $language.close;
+}
 
 my $fixed = $transducer.snapshot;
 $transducer.close;
