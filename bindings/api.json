@@ -928,6 +928,10 @@
       "rustModule": "phonetic"
     },
     {
+      "name": "llev_phonetic_rules_language",
+      "rustModule": "phonetic"
+    },
+    {
       "name": "llev_phonetic_rules_free",
       "rustModule": "phonetic"
     },

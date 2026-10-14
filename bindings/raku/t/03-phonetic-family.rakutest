@@ -1,0 +1,219 @@
+use Test;
+use Liblevenshtein;
+
+ok build-features() +& BUILD-FEATURE-PHONETIC,
+    'test library includes the phonetic ABI';
+
+subtest 'native phonetic features and weighted distance' => {
+    ok phonetic-features('p') > 0, 'IPA consonant has native features';
+    is phonetic-features('🙂'), 0, 'unknown scalar has no IPA features';
+    is-deeply phonetic-chars-with-features(0).Array, [],
+        'empty feature mask has no matches';
+    ok phonetic-similar-chars('p').elems > 0,
+        'similar IPA characters are copied';
+    is phonetic-voicing-pair('p'), 'b',
+        'native voicing counterpart survives the call';
+    ok phonetic-feature-relation('p', 'b'),
+        'native shared-feature predicate is exposed';
+    my $stop = phonetic-features('p');
+    is phonetic-feature-set-distance($stop, $stop), 0e0,
+        'identical classified feature sets have zero distance';
+    is phonetic-articulatory-distance('p', 'p'), 0e0,
+        'identical IPA scalars have zero distance';
+    is phonetic-articulatory-edit-distance('p', 'p'), 0e0,
+        'identical IPA strings have zero weighted edit distance';
+    my $zero-weights = PhoneticFeatureWeights.new(
+        voicing => 0e0, place-step => 0e0, manner-default => 0e0,
+        manner-table-scale => 0e0, vowel-height-step => 0e0,
+        vowel-backness-step => 0e0, vowel-rounding => 0e0);
+    is phonetic-articulatory-distance('p', 'b',
+        weights => $zero-weights), 0e0,
+        'custom weights use the native seven-double layout';
+    dies-ok { phonetic-features('ab') },
+        'two Unicode scalars are rejected before NativeCall';
+    dies-ok { phonetic-chars-with-features(2**42) },
+        'unknown feature bits are rejected before NativeCall';
+    dies-ok { phonetic-articulatory-edit-distance('cat', 'cat',
+        max-cells => 1) }, 'cell ceiling bounds native allocation';
+    ok phonetic-syllable-count('banana') > 0,
+        'English syllable heuristic is exposed';
+    ok phonetic-syllable-boundaries('banana').elems > 0,
+        'scalar-indexed syllable starts are copied';
+    ok phonetic-syllable-count('aɪ', :ipa) > 0,
+        'IPA syllable heuristic is selectable';
+    dies-ok { phonetic-syllable-count('banana',
+        max-input-scalars => 2) }, 'syllable input ceiling is enforced';
+    my $vowel = phonetic-named-class('vowel');
+    ok $vowel.accepts('a'), 'named native vowel class matches';
+    nok $vowel.accepts('p'), 'named native vowel class excludes consonants';
+    $vowel.close;
+    dies-ok { phonetic-named-class('vowel]|.*') },
+        'named class input cannot inject regex syntax';
+};
+
+subtest 'bounded native word grep' => {
+    my $grep = PhoneticGrep.new(pattern => 'cat');
+    LEAVE $grep.close;
+    is $grep.distance-config<effective>, 0,
+        'compiled exact pattern keeps its distance bound';
+    is $grep.match-distance('cat'), 0,
+        'exact candidate has zero distance';
+    ok !$grep.match-distance('dog').defined,
+        'unmatched candidate returns Nil';
+    my @hits = $grep.scan-line('cat sat cat');
+    is @hits.elems, 2, 'line scan finds both whole words';
+    is-deeply @hits.map(*.text).Array, ['cat', 'cat'],
+        'copied result text remains available';
+    is-deeply @hits.map(*.start-byte).Array, [0, 8],
+        'byte offsets preserve source positions';
+    my @document = $grep.scan-text("dog\ncat");
+    is @document.elems, 1, 'document scan finds one matching line';
+    is @document[0].line-number, 2,
+        'document scan retains one-based line numbers';
+    dies-ok { $grep.scan-line('cat', max-input-bytes => 1) },
+        'input ceiling rejects oversized input';
+    dies-ok { $grep.scan-line('cat cat', max-matches => 1) },
+        'result ceiling rejects excess matches';
+    $grep.close;
+    dies-ok { $grep.match-distance('cat') },
+        'closed matcher rejects access';
+};
+
+subtest 'bounded incremental rewrite and reverse expansion' => {
+    my $transducer = PhoneticTransducer.new;
+    LEAVE $transducer.close;
+    is $transducer.normalize('café'), 'café',
+        'identity transducer copies Unicode text';
+    my $first = $transducer.feed('ca');
+    my $second = $transducer.feed('fé');
+    is $first ~ $second ~ $transducer.finish, 'café',
+        'incremental output reconstructs the source';
+    dies-ok { $transducer.feed('again') },
+        'finished stream requires reset';
+    $transducer.reset;
+    is $transducer.feed('ok') ~ $transducer.finish, 'ok',
+        'reset starts another logical stream';
+    dies-ok { $transducer.normalize('cat', max-input-scalars => 1) },
+        'normalization scalar ceiling is enforced';
+    my $expanded = phonetic-expand('cat');
+    ok $expanded.chars > 0, 'exhaustive reverse expansion is copied';
+    my $costed = phonetic-expand-with-costs('cat');
+    ok $costed<pattern>.chars > 0,
+        'cost-aware reverse expansion is copied';
+    ok $costed<cost> >= 0, 'cost is nonnegative';
+    dies-ok { phonetic-expand('cat',
+        limits => phonetic-expansion-limits(max-input-scalars => 1)) },
+        'expansion scalar ceiling bounds native work';
+};
+
+subtest 'owned online matches and bounded streaming' => {
+    my $online = PhoneticOnlineGrep.new(pattern => 'café');
+    is $online.normalized-query, 'café',
+        'normalized query is copied from the native owner';
+    my @hits = $online.scan('a café café');
+    is @hits.elems, 2, 'online scanner finds two exact occurrences';
+    is-deeply @hits.map(*.original-text).Array, ['café', 'café'],
+        'owned online strings are copied before native release';
+    is-deeply @hits.map(*.byte-start).Array, [2, 8],
+        'online byte spans refer to original UTF-8';
+    dies-ok { $online.scan('café café', max-matches => 1) },
+        'online result ceiling rejects excess matches';
+    my $stream = $online.stream(max-total-bytes => 32);
+    $online.close;
+    $stream.feed('a ca');
+    $stream.feed('fé café');
+    my @streamed = $stream.finish;
+    is-deeply @streamed.map(*.original-text).Array, ['café', 'café'],
+        'stream retains a cloned matcher after producer close';
+    dies-ok { $stream.finish }, 'online stream finishes only once';
+    $stream.close;
+    my $bounded = PhoneticOnlineGrep.new(pattern => 'cat');
+    my $short = $bounded.stream(max-total-bytes => 2);
+    dies-ok { $short.feed('cat') },
+        'stream byte ceiling rejects oversized feed';
+    $short.close;
+    $bounded.close;
+};
+
+subtest 'owned token grep details' => {
+    my $grep = PhoneticTokenGrep.new(query => 'hello world',
+        default-distance => 1);
+    LEAVE $grep.close;
+    my @hits = $grep.scan('helo wrld and hello world');
+    is @hits.elems, 2, 'token scan returns both approximate sequences';
+    is @hits[0].matched-text, 'helo wrld',
+        'first matched source is copied';
+    is @hits[0].total-distance, 2,
+        'combined native token distance is preserved';
+    is-deeply @hits[0].details.map(*.original-text).Array,
+        ['helo', 'wrld'], 'nested token details are copied';
+    is-deeply @hits[0].details.map(*.distance).Array,
+        [1, 1], 'per-token native distances are preserved';
+    dies-ok { $grep.scan('helo wrld', max-details => 1) },
+        'nested detail budget rejects oversized result';
+    dies-ok { PhoneticTokenGrep.new(query => '(') },
+        'hostile invalid query fails without publishing a handle';
+};
+
+subtest 'normalized dictionary ownership and mutation' => {
+    my $dictionary = PhoneticNormalizedDictionary.new(
+        terms => ['phone', 'fone', 'cat']);
+    LEAVE $dictionary.close;
+    my @candidates = $dictionary.query('fone', max-distance => 2);
+    ok @candidates.grep(*.term eq 'fone'),
+        'exact normalized candidate is present';
+    ok @candidates.grep(*.term eq 'phone'),
+        'phonetic candidate retains its original term';
+    ok @candidates.grep(*.normalized-form.chars > 0).elems ==
+        @candidates.elems,
+        'candidate strings survive native array release';
+    ok $dictionary.insert('new'), 'mutable dictionary accepts insertion';
+    ok $dictionary.query('new').grep(*.term eq 'new'),
+        'inserted term is queryable';
+    ok $dictionary.remove('new'), 'mutable dictionary removes a term';
+    nok $dictionary.query('new').grep(*.term eq 'new'),
+        'removed term is absent';
+    my $compact = PhoneticNormalizedDictionary.new(
+        terms => ['one'], :compact);
+    LEAVE $compact.close if $compact.defined;
+    dies-ok { $compact.insert('two') },
+        'compact native dictionary rejects mutation';
+    dies-ok { PhoneticNormalizedDictionary.new(
+        terms => ['a', 'b'], max-terms => 1) },
+        'constructor term ceiling is enforced before NativeCall';
+};
+
+subtest 'native language registry and trusted rule file' => {
+    my $english = PhoneticRuleSet.new(language => 'en-us');
+    LEAVE $english.close;
+    my $alias = PhoneticRuleSet.new(language => 'EN-US');
+    LEAVE $alias.close;
+    is $english.elems, $alias.elems,
+        'language selection accepts case-insensitive aliases';
+    for 'es', 'fr-ca', 'hi' -> $tag {
+        my $rules = PhoneticRuleSet.new(language => $tag);
+        ok $rules.elems > 0, "{$tag} selects embedded native rules";
+        $rules.close;
+    }
+    dies-ok { PhoneticRuleSet.new(language => 'unsupported-language') },
+        'unknown tag is rejected without a handle';
+    dies-ok { PhoneticRuleSet.new(language => 'x' x 65) },
+        'oversized tag is rejected before NativeCall';
+    dies-ok { PhoneticRuleSet.new(source => q[@include "unsafe.llev";]) },
+        'untrusted inline rules cannot resolve file includes';
+
+    my $scratch = $*CWD.add('target/raku-test');
+    $scratch.mkdir;
+    my $file = $scratch.add("phonetic-rules-{$*PID}.llev");
+    LEAVE $file.unlink if $file.e;
+    spurt $file, 'ph -> f;';
+    my $loaded = PhoneticRuleSet.new(file => $file.Str);
+    is $loaded.apply('phone'), 'fone',
+        'trusted local .llev file is parsed through the native loader';
+    $loaded.close;
+    dies-ok { PhoneticRuleSet.new(file => $file.Str,
+        max-total-path-bytes => 1) },
+        'path byte ceiling rejects before file loading';
+};
+
+done-testing;

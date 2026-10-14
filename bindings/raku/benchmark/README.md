@@ -62,3 +62,27 @@ Hamming is linear, indel bounded calls use a diagonal band, and affine
 bounded calls still compute the exact Gotoh result before comparison. The
 current budget covers one short input shape; profiling and size-sweep
 experiments are needed before interpreting it as a long-input guarantee.
+
+## Phonetic online scan compared with direct Rust
+
+`phonetic-scan.raku` and `examples/phonetic_raku_baseline.rs` scan the same
+1,024-byte UTF-8 document (`"cat dog "` repeated 128 times) with a compiled
+exact `cat` matcher. Each run returns 128 matches. Both use the same Rust
+online scanner; Raku additionally crosses NativeCall and copies owned result
+strings into host values. Five warmups precede 20 measured scans, and the
+reported median is the average of the middle two timings.
+
+```sh
+CARGO_BUILD_JOBS=1 CARGO_INCREMENTAL=0 RUSTFLAGS=-Cdebuginfo=0 \
+  cargo run --example phonetic_raku_baseline --no-default-features \
+  --features raku-bindings
+LIBLEVENSHTEIN_LIBRARY="$PWD/target/debug/libliblevenshtein.so" \
+  raku -Ibindings/raku/lib -I../vinary-tree-interop/bindings/raku/lib \
+  bindings/raku/benchmark/phonetic-scan.raku
+```
+
+On 2026-10-14, under a one-CPU quota, no swap, and 2 GiB Rust / 1 GiB Raku
+memory caps, the debug-build median was 2,557.944 µs for direct Rust and
+5,127.685 µs for Raku (2.00×). Both returned 128 matches in all runs. The
+comparison measures host materialization as well as call overhead; it is one
+fixed workload and is not a release-wide throughput guarantee.

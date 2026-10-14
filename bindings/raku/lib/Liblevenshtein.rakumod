@@ -149,6 +149,146 @@ class OwnedString is repr('CStruct') is export {
     has size_t $.len;
 }
 
+class PhoneticFeatureWeights is repr('CStruct') is export {
+    has num64 $.voicing;
+    has num64 $.place-step;
+    has num64 $.manner-default;
+    has num64 $.manner-table-scale;
+    has num64 $.vowel-height-step;
+    has num64 $.vowel-backness-step;
+    has num64 $.vowel-rounding;
+}
+
+class RawPhoneticGrepMatch is repr('CStruct') {
+    has size_t $.line-number;
+    has size_t $.start-byte;
+    has size_t $.end-byte;
+    has uint8 $.distance;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+    has uint8 $.reserved3;
+    has uint8 $.reserved4;
+    has uint8 $.reserved5;
+    has uint8 $.reserved6;
+}
+
+class PhoneticGrepHit is export {
+    has Int:D $.line-number is required;
+    has Int:D $.start-byte is required;
+    has Int:D $.end-byte is required;
+    has Int:D $.distance is required;
+    has Str:D $.text is required;
+}
+
+class RawPhoneticOnlineMatch is repr('CStruct') {
+    has size_t $.byte-start;
+    has size_t $.byte-end;
+    has size_t $.char-start;
+    has size_t $.char-end;
+    has Pointer $.original-data;
+    has size_t $.original-len;
+    has Pointer $.normalized-data;
+    has size_t $.normalized-len;
+    has uint8 $.distance;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+    has uint8 $.reserved3;
+    has uint8 $.reserved4;
+    has uint8 $.reserved5;
+    has uint8 $.reserved6;
+}
+
+class PhoneticOnlineHit is export {
+    has Int:D $.byte-start is required;
+    has Int:D $.byte-end is required;
+    has Int:D $.char-start is required;
+    has Int:D $.char-end is required;
+    has Str:D $.original-text is required;
+    has Str:D $.normalized-text is required;
+    has Int:D $.distance is required;
+}
+
+class RawPhoneticTokenDetail is repr('CStruct') {
+    has size_t $.token-index;
+    has size_t $.byte-start;
+    has size_t $.byte-end;
+    has Pointer $.original-data;
+    has size_t $.original-len;
+    has Pointer $.normalized-data;
+    has size_t $.normalized-len;
+    has uint8 $.distance;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+    has uint8 $.reserved3;
+    has uint8 $.reserved4;
+    has uint8 $.reserved5;
+    has uint8 $.reserved6;
+}
+
+class RawPhoneticTokenMatch is repr('CStruct') {
+    has size_t $.byte-start;
+    has size_t $.byte-end;
+    has uint8 $.total-distance;
+    has uint8 $.reserved0;
+    has uint8 $.reserved1;
+    has uint8 $.reserved2;
+    has uint8 $.reserved3;
+    has uint8 $.reserved4;
+    has uint8 $.reserved5;
+    has uint8 $.reserved6;
+    has Pointer $.matched-data;
+    has size_t $.matched-len;
+    has Pointer $.details;
+    has size_t $.detail-count;
+}
+
+class PhoneticTokenDetail is export {
+    has Int:D $.token-index is required;
+    has Int:D $.byte-start is required;
+    has Int:D $.byte-end is required;
+    has Str:D $.original-text is required;
+    has Str:D $.normalized-text is required;
+    has Int:D $.distance is required;
+}
+
+class PhoneticTokenHit is export {
+    has Int:D $.byte-start is required;
+    has Int:D $.byte-end is required;
+    has Int:D $.total-distance is required;
+    has Str:D $.matched-text is required;
+    has List:D $.details is required;
+}
+
+class RawPhoneticUtf8View is repr('CStruct') {
+    has size_t $.data;
+    has size_t $.len;
+}
+
+class RawPhoneticCandidate is repr('CStruct') {
+    has Pointer $.term-data;
+    has size_t $.term-len;
+    has size_t $.distance;
+    has Pointer $.normalized-data;
+    has size_t $.normalized-len;
+}
+
+class PhoneticCandidate is export {
+    has Str:D $.term is required;
+    has Int:D $.distance is required;
+    has Str:D $.normalized-form is required;
+}
+
+class PhoneticExpansionLimits is repr('CStruct') is export {
+    has size_t $.max-input-scalars;
+    has size_t $.max-rules;
+    has size_t $.max-rule-units;
+    has size_t $.max-nodes;
+    has size_t $.max-output-bytes;
+}
+
 class Match is export {
     has Mu $.term is required;
     has Int:D $.distance is required;
@@ -432,17 +572,230 @@ sub llev-transducer-query-pattern(Pointer, Pointer, uint8, Pointer is rw --> int
     is native(&native-library) is symbol('llev_transducer_query_pattern') { * }
 sub llev-phonetic-rules-parse(Pointer, size_t, Pointer is rw --> int32)
     is native(&native-library) is symbol('llev_phonetic_rules_parse') { * }
+sub llev-phonetic-rules-load-file(Pointer, size_t, Pointer, size_t, size_t,
+    Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_rules_load_file') { * }
 sub llev-phonetic-rules-builtin(uint32, Pointer is rw --> int32)
     is native(&native-library) is symbol('llev_phonetic_rules_builtin') { * }
+sub llev-phonetic-rules-language(Pointer, size_t, Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_rules_language') { * }
 sub llev-phonetic-rules-free(Pointer)
     is native(&native-library) is symbol('llev_phonetic_rules_free') { * }
 sub llev-phonetic-rules-len(Pointer, size_t is rw --> int32)
     is native(&native-library) is symbol('llev_phonetic_rules_len') { * }
 sub llev-phonetic-rules-apply(Pointer, Pointer, size_t, OwnedString --> int32)
     is native(&native-library) is symbol('llev_phonetic_rules_apply') { * }
+sub llev-phonetic-articulatory-distance(uint32, uint32, Pointer, num64 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_articulatory_distance') { * }
+sub llev-phonetic-articulatory-edit-distance(Pointer, size_t, Pointer, size_t,
+    Pointer, size_t, num64 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_articulatory_edit_distance') { * }
+sub llev-phonetic-syllable-count(Pointer, size_t, uint8, size_t,
+    size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_syllable_count') { * }
+sub llev-phonetic-syllable-boundaries(Pointer, size_t, uint8, size_t,
+    Pointer, size_t, size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_syllable_boundaries') { * }
+sub llev-phonetic-features(uint32, uint64 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_features') { * }
+sub llev-phonetic-chars-with-features(uint64, uint8, Pointer, size_t,
+    size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_chars_with_features') { * }
+sub llev-phonetic-similar-chars(uint32, Pointer, size_t, size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_similar_chars') { * }
+sub llev-phonetic-voicing-pair(uint32, uint32 is rw, uint8 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_voicing_pair') { * }
+sub llev-phonetic-feature-relation(uint32, uint32, uint8, uint8 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_feature_relation') { * }
+sub llev-phonetic-expand-feature-based(uint32, Pointer, size_t,
+    size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_expand_feature_based') { * }
+sub llev-phonetic-feature-set-distance(uint64, uint64, Pointer, num64 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_feature_set_distance') { * }
+sub llev-phonetic-grep-new(Pointer, size_t, Pointer, uint8, uint32, uint8,
+    Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_grep_new') { * }
+sub llev-phonetic-grep-free(Pointer)
+    is native(&native-library) is symbol('llev_phonetic_grep_free') { * }
+sub llev-phonetic-grep-distance-config(Pointer, uint8 is rw, uint8 is rw,
+    uint8 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_grep_distance_config') { * }
+sub llev-phonetic-grep-matches(Pointer, Pointer, size_t, size_t, uint8 is rw,
+    uint8 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_grep_matches') { * }
+sub llev-phonetic-grep-scan-line(Pointer, Pointer, size_t, size_t, Pointer,
+    size_t, size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_grep_scan_line') { * }
+sub llev-phonetic-grep-scan-text(Pointer, Pointer, size_t, size_t, Pointer,
+    size_t, size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_grep_scan_text') { * }
+sub llev-phonetic-transducer-new(Pointer, Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_transducer_new') { * }
+sub llev-phonetic-transducer-free(Pointer)
+    is native(&native-library) is symbol('llev_phonetic_transducer_free') { * }
+sub llev-phonetic-transducer-feed(Pointer, Pointer, size_t, size_t, size_t,
+    OwnedString --> int32)
+    is native(&native-library) is symbol('llev_phonetic_transducer_feed') { * }
+sub llev-phonetic-transducer-finish(Pointer, size_t, OwnedString --> int32)
+    is native(&native-library) is symbol('llev_phonetic_transducer_finish') { * }
+sub llev-phonetic-transducer-reset(Pointer --> int32)
+    is native(&native-library) is symbol('llev_phonetic_transducer_reset') { * }
+sub llev-phonetic-transducer-normalize(Pointer, Pointer, size_t, size_t,
+    size_t, OwnedString --> int32)
+    is native(&native-library) is symbol('llev_phonetic_transducer_normalize') { * }
+sub llev-phonetic-expand(Pointer, size_t, Pointer, Pointer,
+    OwnedString --> int32)
+    is native(&native-library) is symbol('llev_phonetic_expand') { * }
+sub llev-phonetic-expand-with-costs(Pointer, size_t, Pointer, Pointer,
+    OwnedString, num64 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_expand_with_costs') { * }
+sub llev-phonetic-online-new(Pointer, size_t, Pointer, uint8, uint8, size_t,
+    Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_online_new') { * }
+sub llev-phonetic-online-free(Pointer)
+    is native(&native-library) is symbol('llev_phonetic_online_free') { * }
+sub llev-phonetic-online-normalized-query(Pointer, OwnedString --> int32)
+    is native(&native-library) is symbol('llev_phonetic_online_normalized_query') { * }
+sub llev-phonetic-online-scan(Pointer, Pointer, size_t, size_t, size_t,
+    Pointer is rw, size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_online_scan') { * }
+sub llev-phonetic-online-matches-free(Pointer, size_t)
+    is native(&native-library) is symbol('llev_phonetic_online_matches_free') { * }
+sub llev-phonetic-online-stream-new(Pointer, size_t, Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_online_stream_new') { * }
+sub llev-phonetic-online-stream-free(Pointer)
+    is native(&native-library) is symbol('llev_phonetic_online_stream_free') { * }
+sub llev-phonetic-online-stream-feed(Pointer, Pointer, size_t --> int32)
+    is native(&native-library) is symbol('llev_phonetic_online_stream_feed') { * }
+sub llev-phonetic-online-stream-finish(Pointer, size_t, Pointer is rw,
+    size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_online_stream_finish') { * }
+sub llev-phonetic-token-new(Pointer, size_t, Pointer, uint8, size_t,
+    Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_token_new') { * }
+sub llev-phonetic-token-free(Pointer)
+    is native(&native-library) is symbol('llev_phonetic_token_free') { * }
+sub llev-phonetic-token-scan(Pointer, Pointer, size_t, size_t, size_t,
+    size_t, Pointer is rw, size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_token_scan') { * }
+sub llev-phonetic-token-matches-free(Pointer, size_t)
+    is native(&native-library) is symbol('llev_phonetic_token_matches_free') { * }
+sub llev-phonetic-dictionary-new(Pointer, size_t, Pointer, uint32, uint8,
+    size_t, size_t, Pointer is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_dictionary_new') { * }
+sub llev-phonetic-dictionary-free(Pointer)
+    is native(&native-library) is symbol('llev_phonetic_dictionary_free') { * }
+sub llev-phonetic-dictionary-query(Pointer, Pointer, size_t, size_t, size_t,
+    size_t, Pointer is rw, size_t is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_dictionary_query') { * }
+sub llev-phonetic-candidates-free(Pointer, size_t)
+    is native(&native-library) is symbol('llev_phonetic_candidates_free') { * }
+sub llev-phonetic-dictionary-update(Pointer, Pointer, size_t, uint8, size_t,
+    uint8 is rw --> int32)
+    is native(&native-library) is symbol('llev_phonetic_dictionary_update') { * }
 sub llev-owned-string-free(OwnedString)
     is native(&native-library) is symbol('llev_owned_string_free') { * }
 sub memcpy(Pointer, Pointer, size_t --> Pointer) is native { * }
+
+sub take-owned-string(OwnedString:D $output --> Str:D) {
+    LEAVE llev-owned-string-free($output);
+    my $result = buf8.allocate($output.len);
+    memcpy(raw-pointer($result), $output.data, $output.len) if $output.len;
+    $result.decode('utf8')
+}
+
+sub copy-native-utf8(Pointer $data, Int:D $length --> Str:D) {
+    die 'native result has a null pointer with nonzero length'
+        if $length && !$data;
+    my $result = buf8.allocate($length);
+    memcpy(raw-pointer($result), $data, $length) if $length;
+    $result.decode('utf8')
+}
+
+sub copy-online-matches(Pointer $matches, Int:D $count --> List:D) {
+    LEAVE llev-phonetic-online-matches-free($matches, $count);
+    return ().List unless $count;
+    die 'native online scan returned null matches' unless $matches;
+    my $width = nativesizeof(RawPhoneticOnlineMatch.new);
+    my @result;
+    for ^$count -> $index {
+        my $raw = copy-cstruct(RawPhoneticOnlineMatch,
+            Pointer.new($matches.Int + $index * $width));
+        die 'native online scan returned inverted spans'
+            unless $raw.byte-start <= $raw.byte-end &&
+                $raw.char-start <= $raw.char-end;
+        @result.push(PhoneticOnlineHit.new(
+            byte-start => $raw.byte-start.Int,
+            byte-end => $raw.byte-end.Int,
+            char-start => $raw.char-start.Int,
+            char-end => $raw.char-end.Int,
+            original-text => copy-native-utf8($raw.original-data,
+                $raw.original-len),
+            normalized-text => copy-native-utf8($raw.normalized-data,
+                $raw.normalized-len),
+            distance => $raw.distance.Int));
+    }
+    @result.List
+}
+
+sub copy-token-matches(Pointer $matches, Int:D $count --> List:D) {
+    LEAVE llev-phonetic-token-matches-free($matches, $count);
+    return ().List unless $count;
+    die 'native token scan returned null matches' unless $matches;
+    my $match-width = nativesizeof(RawPhoneticTokenMatch.new);
+    my $detail-width = nativesizeof(RawPhoneticTokenDetail.new);
+    my @result;
+    for ^$count -> $index {
+        my $raw = copy-cstruct(RawPhoneticTokenMatch,
+            Pointer.new($matches.Int + $index * $match-width));
+        die 'native token scan returned an inverted byte span'
+            unless $raw.byte-start <= $raw.byte-end;
+        die 'native token scan returned null details'
+            if $raw.detail-count && !$raw.details;
+        my @details;
+        for ^$raw.detail-count -> $detail-index {
+            my $detail = copy-cstruct(RawPhoneticTokenDetail,
+                Pointer.new($raw.details.Int + $detail-index * $detail-width));
+            die 'native token scan returned an inverted detail span'
+                unless $detail.byte-start <= $detail.byte-end;
+            @details.push(PhoneticTokenDetail.new(
+                token-index => $detail.token-index.Int,
+                byte-start => $detail.byte-start.Int,
+                byte-end => $detail.byte-end.Int,
+                original-text => copy-native-utf8($detail.original-data,
+                    $detail.original-len),
+                normalized-text => copy-native-utf8($detail.normalized-data,
+                    $detail.normalized-len),
+                distance => $detail.distance.Int));
+        }
+        @result.push(PhoneticTokenHit.new(
+            byte-start => $raw.byte-start.Int,
+            byte-end => $raw.byte-end.Int,
+            total-distance => $raw.total-distance.Int,
+            matched-text => copy-native-utf8($raw.matched-data,
+                $raw.matched-len),
+            details => @details.List));
+    }
+    @result.List
+}
+
+sub copy-phonetic-candidates(Pointer $candidates, Int:D $count --> List:D) {
+    LEAVE llev-phonetic-candidates-free($candidates, $count);
+    return ().List unless $count;
+    die 'native dictionary returned null candidates' unless $candidates;
+    my $width = nativesizeof(RawPhoneticCandidate.new);
+    my @result;
+    for ^$count -> $index {
+        my $raw = copy-cstruct(RawPhoneticCandidate,
+            Pointer.new($candidates.Int + $index * $width));
+        @result.push(PhoneticCandidate.new(
+            term => copy-native-utf8($raw.term-data, $raw.term-len),
+            distance => $raw.distance.Int,
+            normalized-form => copy-native-utf8($raw.normalized-data,
+                $raw.normalized-len)));
+    }
+    @result.List
+}
 
 sub abi-version(--> UInt:D) is export { llev-abi-version().UInt }
 sub api-revision(--> UInt:D) is export { llev-api-revision().UInt }
@@ -480,6 +833,33 @@ sub byte-argument(Blob:D $buffer --> NativeByteArgument:D) {
         $units[$index] = $value;
     }
     NativeByteArgument.new(storage => $units, length => $buffer.elems)
+}
+
+sub require-phonetic(--> Nil) {
+    X::Liblevenshtein.new(
+        status => UNSUPPORTED,
+        operation => 'phonetic',
+        detail => 'native library lacks bindings-phonetic',
+    ).throw unless build-features() +& BUILD-FEATURE-PHONETIC;
+}
+
+sub phonetic-scalar(Str:D $character --> Int:D) {
+    my @scalars = $character.ords;
+    die 'phonetic character must contain exactly one Unicode scalar'
+        unless @scalars.elems == 1;
+    @scalars[0]
+}
+
+sub phonetic-limit(Int:D $limit, Str:D $name --> Int:D) {
+    die "$name must be positive and fit size_t"
+        unless 0 < $limit < 2 ** (nativesizeof(size_t) * 8);
+    $limit
+}
+
+sub phonetic-mask(Int:D $mask --> UInt:D) {
+    die 'phonetic feature mask must use only published bits 0..41'
+        unless 0 <= $mask < 2**42;
+    $mask.UInt
 }
 
 sub copy-cstruct(::T, Pointer:D $source --> T:D) {
@@ -1078,6 +1458,12 @@ class PhoneticPattern is export {
     submethod DESTROY { try self.close }
 }
 
+sub phonetic-named-class(Str:D $name --> PhoneticPattern:D) is export {
+    die 'named phonetic class must be a short identifier'
+        unless 0 < $name.chars <= 64 && $name ~~ /^ \w+ $/;
+    PhoneticPattern.new(regex => '[:' ~ $name ~ ':]')
+}
+
 class Transducer is export {
     has Pointer $!handle is required;
     has Bool $!closed = False;
@@ -1325,6 +1711,49 @@ class PhoneticRuleSet is export {
         self.bless(handle => $output)
     }
 
+    multi method new(Str:D :$language!) {
+        require-phonetic;
+        die 'language selection needs native API revision 11'
+            if api-revision() < 11;
+        my $bytes = byte-argument($language.encode('utf8'));
+        die 'language tag must contain 1..64 UTF-8 bytes'
+            unless 0 < $bytes.length <= 64;
+        my Pointer $output .= new;
+        check-status(llev-phonetic-rules-language($bytes.pointer,
+            $bytes.length, $output), 'phonetic-rules-language');
+        self.bless(handle => $output)
+    }
+
+    multi method new(Str:D :$file!, Positional:D :$search-paths = [],
+        Int:D :$max-total-path-bytes = 4096) {
+        require-phonetic;
+        phonetic-limit($max-total-path-bytes, 'max-total-path-bytes');
+        die 'at most 64 phonetic search paths are allowed'
+            if $search-paths.elems > 64;
+        my $path = byte-argument($file.encode('utf8'));
+        my $total = $path.length;
+        my @owners;
+        my @views;
+        for $search-paths.list -> $entry {
+            die 'phonetic search path must be nonempty Str'
+                unless $entry ~~ Str:D && $entry.chars;
+            my $bytes = byte-argument($entry.encode('utf8'));
+            $total += $bytes.length;
+            @owners.push($bytes);
+            @views.push(RawPhoneticUtf8View.new(
+                data => $bytes.pointer.Int, len => $bytes.length));
+        }
+        die 'phonetic file paths exceed max-total-path-bytes'
+            if $total > $max-total-path-bytes;
+        my $storage = contiguous-structs(@views,
+            nativesizeof(RawPhoneticUtf8View.new));
+        my Pointer $output .= new;
+        check-status(llev-phonetic-rules-load-file($path.pointer,
+            $path.length, nativecast(Pointer, $storage), @views.elems,
+            $max-total-path-bytes, $output), 'phonetic-rules-load-file');
+        self.bless(handle => $output)
+    }
+
     method !handle(--> Pointer:D) {
         X::Liblevenshtein.new(
             status => CLOSED,
@@ -1333,6 +1762,8 @@ class PhoneticRuleSet is export {
         ).throw if $!closed;
         $!handle
     }
+
+    method native-handle(--> Pointer:D) { self!handle }
 
     method elems(--> Int:D) {
         my size_t $output = 0;
@@ -1356,6 +1787,677 @@ class PhoneticRuleSet is export {
     method close(--> Nil) {
         return if $!closed;
         llev-phonetic-rules-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+# The feature mask uses the fixed bit indices in liblevenshtein.h; callers
+# may combine bits without depending on Rust enum discriminants.
+sub phonetic-features(Str:D $character --> UInt:D) is export {
+    require-phonetic;
+    my uint64 $mask = 0;
+    check-status(llev-phonetic-features(phonetic-scalar($character), $mask),
+        'phonetic-features');
+    $mask.UInt
+}
+
+sub phonetic-feature-characters(Int:D $selector, Int:D $value,
+    Int:D $max-chars --> List:D) {
+    require-phonetic;
+    phonetic-limit($max-chars, 'max-chars');
+    my size_t $required = 0;
+    my $status = do given $selector {
+        when 0 { llev-phonetic-chars-with-features(
+            phonetic-mask($value), 0, Pointer, 0, $required) }
+        when 1 { llev-phonetic-chars-with-features(
+            phonetic-mask($value), 1, Pointer, 0, $required) }
+        when 2 { llev-phonetic-similar-chars($value, Pointer, 0, $required) }
+        when 3 { llev-phonetic-expand-feature-based(
+            $value, Pointer, 0, $required) }
+    };
+    check-status($status, 'phonetic-feature-characters')
+        unless $status == LIMIT-EXCEEDED;
+    die 'phonetic character result exceeds max-chars'
+        if $required > $max-chars;
+    return ().List unless $required;
+    my $chars = CArray[uint32].allocate($required);
+    $status = do given $selector {
+        when 0 { llev-phonetic-chars-with-features(
+            $value, 0, nativecast(Pointer, $chars), $required, $required) }
+        when 1 { llev-phonetic-chars-with-features(
+            $value, 1, nativecast(Pointer, $chars), $required, $required) }
+        when 2 { llev-phonetic-similar-chars($value,
+            nativecast(Pointer, $chars), $required, $required) }
+        when 3 { llev-phonetic-expand-feature-based($value,
+            nativecast(Pointer, $chars), $required, $required) }
+    };
+    check-status($status, 'phonetic-feature-characters');
+    (^$required).map({ $chars[$_].chr }).List
+}
+
+sub phonetic-chars-with-features(Int:D $mask, Bool:D :$any = False,
+    Int:D :$max-chars = 4096 --> List:D) is export {
+    phonetic-feature-characters($any ?? 1 !! 0, $mask, $max-chars)
+}
+
+sub phonetic-similar-chars(Str:D $character,
+    Int:D :$max-chars = 4096 --> List:D) is export {
+    phonetic-feature-characters(2, phonetic-scalar($character), $max-chars)
+}
+
+sub phonetic-expand-feature-based(Str:D $character,
+    Int:D :$max-chars = 4096 --> List:D) is export {
+    phonetic-feature-characters(3, phonetic-scalar($character), $max-chars)
+}
+
+sub phonetic-voicing-pair(Str:D $character --> Mu) is export {
+    require-phonetic;
+    my uint32 $partner = 0;
+    my uint8 $found = 0;
+    check-status(llev-phonetic-voicing-pair(
+        phonetic-scalar($character), $partner, $found), 'phonetic-voicing-pair');
+    $found ?? $partner.chr !! Nil
+}
+
+sub phonetic-feature-relation(Str:D $source, Str:D $target,
+    Bool:D :$free-substitution = False --> Bool:D) is export {
+    require-phonetic;
+    my uint8 $matches = 0;
+    check-status(llev-phonetic-feature-relation(
+        phonetic-scalar($source), phonetic-scalar($target),
+        $free-substitution ?? 1 !! 0, $matches), 'phonetic-feature-relation');
+    so $matches
+}
+
+sub phonetic-feature-set-distance(Int:D $source-mask, Int:D $target-mask,
+    PhoneticFeatureWeights :$weights --> Num:D) is export {
+    require-phonetic;
+    my num64 $distance = 0e0;
+    check-status(llev-phonetic-feature-set-distance(
+        phonetic-mask($source-mask), phonetic-mask($target-mask),
+        $weights.defined ?? nativecast(Pointer, $weights) !! Pointer,
+        $distance), 'phonetic-feature-set-distance');
+    $distance.Num
+}
+
+sub phonetic-articulatory-distance(Str:D $source, Str:D $target,
+    PhoneticFeatureWeights :$weights --> Num:D) is export {
+    require-phonetic;
+    my num64 $distance = 0e0;
+    check-status(llev-phonetic-articulatory-distance(
+        phonetic-scalar($source), phonetic-scalar($target),
+        $weights.defined ?? nativecast(Pointer, $weights) !! Pointer,
+        $distance), 'phonetic-articulatory-distance');
+    $distance.Num
+}
+
+sub phonetic-articulatory-edit-distance(Str:D $source, Str:D $target,
+    Int:D :$max-cells = 1_000_000, PhoneticFeatureWeights :$weights
+    --> Num:D) is export {
+    require-phonetic;
+    phonetic-limit($max-cells, 'max-cells');
+    my $left = byte-argument($source.encode('utf8'));
+    my $right = byte-argument($target.encode('utf8'));
+    my num64 $distance = 0e0;
+    check-status(llev-phonetic-articulatory-edit-distance(
+        $left.pointer, $left.length, $right.pointer, $right.length,
+        $weights.defined ?? nativecast(Pointer, $weights) !! Pointer,
+        $max-cells, $distance), 'phonetic-articulatory-edit-distance');
+    $distance.Num
+}
+
+sub phonetic-syllable-count(Str:D $input, Bool:D :$ipa = False,
+    Int:D :$max-input-scalars = 4096 --> Int:D) is export {
+    require-phonetic;
+    phonetic-limit($max-input-scalars, 'max-input-scalars');
+    die 'phonetic input exceeds max-input-scalars'
+        if $input.ords.elems > $max-input-scalars;
+    my $bytes = byte-argument($input.encode('utf8'));
+    my size_t $count = 0;
+    check-status(llev-phonetic-syllable-count($bytes.pointer,
+        $bytes.length, $ipa ?? 1 !! 0, $max-input-scalars, $count),
+        'phonetic-syllable-count');
+    $count.Int
+}
+
+sub phonetic-syllable-boundaries(Str:D $input, Bool:D :$ipa = False,
+    Int:D :$max-input-scalars = 4096,
+    Int:D :$max-boundaries = 4096 --> List:D) is export {
+    require-phonetic;
+    phonetic-limit($max-input-scalars, 'max-input-scalars');
+    phonetic-limit($max-boundaries, 'max-boundaries');
+    die 'phonetic input exceeds max-input-scalars'
+        if $input.ords.elems > $max-input-scalars;
+    my $bytes = byte-argument($input.encode('utf8'));
+    my size_t $required = 0;
+    my $status = llev-phonetic-syllable-boundaries($bytes.pointer,
+        $bytes.length, $ipa ?? 1 !! 0, $max-input-scalars,
+        Pointer, 0, $required);
+    check-status($status, 'phonetic-syllable-boundaries')
+        unless $status == LIMIT-EXCEEDED;
+    die 'phonetic syllable result exceeds max-boundaries'
+        if $required > $max-boundaries;
+    return ().List unless $required;
+    my $positions = CArray[size_t].allocate($required);
+    check-status(llev-phonetic-syllable-boundaries($bytes.pointer,
+        $bytes.length, $ipa ?? 1 !! 0, $max-input-scalars,
+        nativecast(Pointer, $positions), $required, $required),
+        'phonetic-syllable-boundaries');
+    (^$required).map({ $positions[$_].Int }).List
+}
+
+class PhoneticGrep is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    multi method new(Str:D :$pattern!, PhoneticRuleSet :$rules,
+        Int:D :$max-distance = 0, Algorithm:D :$algorithm = STANDARD,
+        Bool:D :$case-insensitive = False) {
+        require-phonetic;
+        die 'max-distance must fit uint8'
+            unless 0 <= $max-distance <= 255;
+        my $bytes = byte-argument($pattern.encode('utf8'));
+        my Pointer $output .= new;
+        check-status(llev-phonetic-grep-new(
+            $bytes.pointer, $bytes.length,
+            $rules.defined ?? $rules.native-handle !! Pointer,
+            $max-distance, $algorithm.Int, $case-insensitive ?? 1 !! 0,
+            $output), 'phonetic-grep-new');
+        self.bless(handle => $output)
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'phonetic-grep', detail => 'grep matcher is closed').throw
+            if $!closed;
+        $!handle
+    }
+
+    method distance-config(--> Map:D) {
+        my uint8 $effective = 0;
+        my uint8 $local = 0;
+        my uint8 $has-local = 0;
+        check-status(llev-phonetic-grep-distance-config(self!handle,
+            $effective, $local, $has-local), 'phonetic-grep-distance-config');
+        Map.new(effective => $effective.Int,
+            local-override => ($has-local ?? $local.Int !! Nil))
+    }
+
+    method match-distance(Str:D $candidate,
+        Int:D :$max-candidate-bytes = 1_000_000 --> Mu) {
+        phonetic-limit($max-candidate-bytes, 'max-candidate-bytes');
+        my $bytes = byte-argument($candidate.encode('utf8'));
+        my uint8 $distance = 0;
+        my uint8 $found = 0;
+        check-status(llev-phonetic-grep-matches(self!handle,
+            $bytes.pointer, $bytes.length, $max-candidate-bytes,
+            $distance, $found), 'phonetic-grep-matches');
+        $found ?? $distance.Int !! Nil
+    }
+
+    method !scan(Str:D $source, Bool:D $document, Int:D $max-input-bytes,
+        Int:D $max-matches --> List:D) {
+        phonetic-limit($max-input-bytes, 'max-input-bytes');
+        phonetic-limit($max-matches, 'max-matches');
+        my $bytes = byte-argument($source.encode('utf8'));
+        die 'phonetic grep input exceeds max-input-bytes'
+            if $bytes.length > $max-input-bytes;
+        my size_t $required = 0;
+        my $status = $document
+            ?? llev-phonetic-grep-scan-text(self!handle,
+                $bytes.pointer, $bytes.length, $max-input-bytes,
+                Pointer, 0, $required)
+            !! llev-phonetic-grep-scan-line(self!handle,
+                $bytes.pointer, $bytes.length, $max-input-bytes,
+                Pointer, 0, $required);
+        check-status($status, 'phonetic-grep-scan')
+            unless $status == LIMIT-EXCEEDED;
+        die 'phonetic grep result exceeds max-matches'
+            if $required > $max-matches;
+        return ().List unless $required;
+        my $width = nativesizeof(RawPhoneticGrepMatch.new);
+        my $output = CArray[uint8].allocate($required * $width);
+        $status = $document
+            ?? llev-phonetic-grep-scan-text(self!handle,
+                $bytes.pointer, $bytes.length, $max-input-bytes,
+                nativecast(Pointer, $output), $required, $required)
+            !! llev-phonetic-grep-scan-line(self!handle,
+                $bytes.pointer, $bytes.length, $max-input-bytes,
+                nativecast(Pointer, $output), $required, $required);
+        check-status($status, 'phonetic-grep-scan');
+        my @lines = $document ?? $source.lines.list !! ($source,);
+        my @hits;
+        for ^$required -> $index {
+            my $address = Pointer.new(nativecast(Pointer, $output).Int +
+                $index * $width);
+            my $raw = copy-cstruct(RawPhoneticGrepMatch, $address);
+            my $line-index = $raw.line-number.Int - 1;
+            die 'native grep returned invalid line number'
+                unless 0 <= $line-index < @lines.elems;
+            my $line = @lines[$line-index].encode('utf8');
+            die 'native grep returned invalid byte span'
+                unless 0 <= $raw.start-byte <= $raw.end-byte <= $line.elems;
+            @hits.push(PhoneticGrepHit.new(
+                line-number => $raw.line-number.Int,
+                start-byte => $raw.start-byte.Int,
+                end-byte => $raw.end-byte.Int,
+                distance => $raw.distance.Int,
+                text => $line.subbuf($raw.start-byte,
+                    $raw.end-byte - $raw.start-byte).decode('utf8')));
+        }
+        @hits.List
+    }
+
+    method scan-line(Str:D $line, Int:D :$max-input-bytes = 1_000_000,
+        Int:D :$max-matches = 4096 --> List:D) {
+        self!scan($line, False, $max-input-bytes, $max-matches)
+    }
+
+    method scan-text(Str:D $document, Int:D :$max-input-bytes = 1_000_000,
+        Int:D :$max-matches = 4096 --> List:D) {
+        self!scan($document, True, $max-input-bytes, $max-matches)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-phonetic-grep-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+sub phonetic-expansion-limits(
+    Int:D :$max-input-scalars = 4096,
+    Int:D :$max-rules = 4096,
+    Int:D :$max-rule-units = 100_000,
+    Int:D :$max-nodes = 100_000,
+    Int:D :$max-output-bytes = 1_000_000,
+    --> PhoneticExpansionLimits:D) is export {
+    PhoneticExpansionLimits.new(
+        max-input-scalars => phonetic-limit($max-input-scalars,
+            'max-input-scalars'),
+        max-rules => phonetic-limit($max-rules, 'max-rules'),
+        max-rule-units => phonetic-limit($max-rule-units, 'max-rule-units'),
+        max-nodes => phonetic-limit($max-nodes, 'max-nodes'),
+        max-output-bytes => phonetic-limit($max-output-bytes,
+            'max-output-bytes'))
+}
+
+sub phonetic-expand(Str:D $input, PhoneticRuleSet :$rules,
+    PhoneticExpansionLimits :$limits = phonetic-expansion-limits()
+    --> Str:D) is export {
+    require-phonetic;
+    my $bytes = byte-argument($input.encode('utf8'));
+    my $output = OwnedString.new;
+    check-status(llev-phonetic-expand($bytes.pointer, $bytes.length,
+        $rules.defined ?? $rules.native-handle !! Pointer,
+        nativecast(Pointer, $limits), $output), 'phonetic-expand');
+    take-owned-string($output)
+}
+
+sub phonetic-expand-with-costs(Str:D $input, PhoneticRuleSet :$rules,
+    PhoneticExpansionLimits :$limits = phonetic-expansion-limits()
+    --> Map:D) is export {
+    require-phonetic;
+    my $bytes = byte-argument($input.encode('utf8'));
+    my $output = OwnedString.new;
+    my num64 $cost = 0e0;
+    check-status(llev-phonetic-expand-with-costs(
+        $bytes.pointer, $bytes.length,
+        $rules.defined ?? $rules.native-handle !! Pointer,
+        nativecast(Pointer, $limits), $output, $cost),
+        'phonetic-expand-with-costs');
+    Map.new(pattern => take-owned-string($output), cost => $cost.Num)
+}
+
+class PhoneticTransducer is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    multi method new(PhoneticRuleSet :$rules) {
+        require-phonetic;
+        my Pointer $output .= new;
+        check-status(llev-phonetic-transducer-new(
+            $rules.defined ?? $rules.native-handle !! Pointer,
+            $output), 'phonetic-transducer-new');
+        self.bless(handle => $output)
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'phonetic-transducer',
+            detail => 'transducer is closed').throw if $!closed;
+        $!handle
+    }
+
+    method feed(Str:D $chunk, Int:D :$max-input-scalars = 4096,
+        Int:D :$max-output-bytes = 1_000_000 --> Str:D) {
+        phonetic-limit($max-input-scalars, 'max-input-scalars');
+        phonetic-limit($max-output-bytes, 'max-output-bytes');
+        my $bytes = byte-argument($chunk.encode('utf8'));
+        my $output = OwnedString.new;
+        check-status(llev-phonetic-transducer-feed(self!handle,
+            $bytes.pointer, $bytes.length, $max-input-scalars,
+            $max-output-bytes, $output), 'phonetic-transducer-feed');
+        take-owned-string($output)
+    }
+
+    method finish(Int:D :$max-output-bytes = 1_000_000 --> Str:D) {
+        phonetic-limit($max-output-bytes, 'max-output-bytes');
+        my $output = OwnedString.new;
+        check-status(llev-phonetic-transducer-finish(self!handle,
+            $max-output-bytes, $output), 'phonetic-transducer-finish');
+        take-owned-string($output)
+    }
+
+    method reset(--> PhoneticTransducer:D) {
+        check-status(llev-phonetic-transducer-reset(self!handle),
+            'phonetic-transducer-reset');
+        self
+    }
+
+    method normalize(Str:D $input, Int:D :$max-input-scalars = 4096,
+        Int:D :$max-output-bytes = 1_000_000 --> Str:D) {
+        phonetic-limit($max-input-scalars, 'max-input-scalars');
+        phonetic-limit($max-output-bytes, 'max-output-bytes');
+        my $bytes = byte-argument($input.encode('utf8'));
+        my $output = OwnedString.new;
+        check-status(llev-phonetic-transducer-normalize(self!handle,
+            $bytes.pointer, $bytes.length, $max-input-scalars,
+            $max-output-bytes, $output), 'phonetic-transducer-normalize');
+        take-owned-string($output)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-phonetic-transducer-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class PhoneticOnlineStream is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'phonetic-online-stream',
+            detail => 'stream is closed').throw if $!closed;
+        $!handle
+    }
+
+    method feed(Str:D $chunk --> PhoneticOnlineStream:D) {
+        my $bytes = byte-argument($chunk.encode('utf8'));
+        check-status(llev-phonetic-online-stream-feed(self!handle,
+            $bytes.pointer, $bytes.length), 'phonetic-online-stream-feed');
+        self
+    }
+
+    method finish(Int:D :$max-matches = 4096 --> List:D) {
+        phonetic-limit($max-matches, 'max-matches');
+        my Pointer $output .= new;
+        my size_t $count = 0;
+        check-status(llev-phonetic-online-stream-finish(self!handle,
+            $max-matches, $output, $count), 'phonetic-online-stream-finish');
+        copy-online-matches($output, $count)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-phonetic-online-stream-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class PhoneticOnlineGrep is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    multi method new(Str:D :$pattern!, PhoneticRuleSet :$rules,
+        Int:D :$max-distance = 0, Bool:D :$case-insensitive = False,
+        Int:D :$max-pattern-scalars = 4096) {
+        require-phonetic;
+        die 'max-distance must fit uint8'
+            unless 0 <= $max-distance <= 255;
+        phonetic-limit($max-pattern-scalars, 'max-pattern-scalars');
+        my $bytes = byte-argument($pattern.encode('utf8'));
+        die 'phonetic pattern exceeds max-pattern-scalars'
+            if $pattern.ords.elems > $max-pattern-scalars;
+        my Pointer $output .= new;
+        check-status(llev-phonetic-online-new($bytes.pointer, $bytes.length,
+            $rules.defined ?? $rules.native-handle !! Pointer,
+            $max-distance, $case-insensitive ?? 1 !! 0,
+            $max-pattern-scalars, $output), 'phonetic-online-new');
+        self.bless(handle => $output)
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'phonetic-online',
+            detail => 'matcher is closed').throw if $!closed;
+        $!handle
+    }
+
+    method normalized-query(--> Str:D) {
+        my $output = OwnedString.new;
+        check-status(llev-phonetic-online-normalized-query(self!handle,
+            $output), 'phonetic-online-normalized-query');
+        take-owned-string($output)
+    }
+
+    method scan(Str:D $document, Int:D :$max-input-bytes = 1_000_000,
+        Int:D :$max-matches = 4096 --> List:D) {
+        phonetic-limit($max-input-bytes, 'max-input-bytes');
+        phonetic-limit($max-matches, 'max-matches');
+        my $bytes = byte-argument($document.encode('utf8'));
+        die 'phonetic online input exceeds max-input-bytes'
+            if $bytes.length > $max-input-bytes;
+        my Pointer $output .= new;
+        my size_t $count = 0;
+        check-status(llev-phonetic-online-scan(self!handle,
+            $bytes.pointer, $bytes.length, $max-input-bytes,
+            $max-matches, $output, $count), 'phonetic-online-scan');
+        copy-online-matches($output, $count)
+    }
+
+    method stream(Int:D :$max-total-bytes = 1_000_000
+        --> PhoneticOnlineStream:D) {
+        phonetic-limit($max-total-bytes, 'max-total-bytes');
+        my Pointer $output .= new;
+        check-status(llev-phonetic-online-stream-new(self!handle,
+            $max-total-bytes, $output), 'phonetic-online-stream-new');
+        PhoneticOnlineStream.new(handle => $output)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-phonetic-online-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class PhoneticTokenGrep is export {
+    has Pointer $!handle is required;
+    has Bool $!closed = False;
+
+    submethod BUILD(Pointer:D :$handle!) { $!handle = $handle }
+
+    multi method new(Str:D :$query!, PhoneticRuleSet :$rules,
+        Int:D :$default-distance = 0,
+        Int:D :$max-query-bytes = 4096) {
+        require-phonetic;
+        die 'default-distance must fit uint8'
+            unless 0 <= $default-distance <= 255;
+        phonetic-limit($max-query-bytes, 'max-query-bytes');
+        my $bytes = byte-argument($query.encode('utf8'));
+        die 'phonetic token query exceeds max-query-bytes'
+            if $bytes.length > $max-query-bytes;
+        my Pointer $output .= new;
+        check-status(llev-phonetic-token-new($bytes.pointer, $bytes.length,
+            $rules.defined ?? $rules.native-handle !! Pointer,
+            $default-distance, $max-query-bytes, $output),
+            'phonetic-token-new');
+        self.bless(handle => $output)
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'phonetic-token',
+            detail => 'matcher is closed').throw if $!closed;
+        $!handle
+    }
+
+    method scan(Str:D $document, Int:D :$max-input-bytes = 1_000_000,
+        Int:D :$max-matches = 4096, Int:D :$max-details = 65_536
+        --> List:D) {
+        phonetic-limit($max-input-bytes, 'max-input-bytes');
+        phonetic-limit($max-matches, 'max-matches');
+        phonetic-limit($max-details, 'max-details');
+        my $bytes = byte-argument($document.encode('utf8'));
+        die 'phonetic token input exceeds max-input-bytes'
+            if $bytes.length > $max-input-bytes;
+        my Pointer $output .= new;
+        my size_t $count = 0;
+        check-status(llev-phonetic-token-scan(self!handle,
+            $bytes.pointer, $bytes.length, $max-input-bytes,
+            $max-matches, $max-details, $output, $count),
+            'phonetic-token-scan');
+        copy-token-matches($output, $count)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-phonetic-token-free($!handle);
+        $!handle = Pointer;
+        $!closed = True;
+    }
+
+    method opened(--> Bool:D) { !$!closed }
+    submethod DESTROY { try self.close }
+}
+
+class PhoneticNormalizedDictionary is export {
+    has Pointer $!handle is required;
+    has Bool:D $.compact is required;
+    has Bool $!closed = False;
+
+    submethod BUILD(Pointer:D :$handle!, Bool:D :$compact!) {
+        $!handle = $handle;
+        $!compact = $compact;
+    }
+
+    multi method new(Positional:D :$terms!, PhoneticRuleSet :$rules,
+        Algorithm:D :$algorithm = STANDARD, Bool:D :$compact = False,
+        Int:D :$max-terms = 100_000,
+        Int:D :$max-total-bytes = 16_000_000) {
+        require-phonetic;
+        phonetic-limit($max-terms, 'max-terms');
+        phonetic-limit($max-total-bytes, 'max-total-bytes');
+        die 'phonetic dictionary exceeds max-terms'
+            if $terms.elems > $max-terms;
+        my @owners;
+        my @views;
+        my $total = 0;
+        for $terms.list -> $term {
+            die 'phonetic dictionary terms must be Str'
+                unless $term ~~ Str:D;
+            my $bytes = byte-argument($term.encode('utf8'));
+            $total += $bytes.length;
+            die 'phonetic dictionary exceeds max-total-bytes'
+                if $total > $max-total-bytes;
+            @owners.push($bytes);
+            @views.push(RawPhoneticUtf8View.new(
+                data => $bytes.pointer.Int, len => $bytes.length));
+        }
+        my $storage = contiguous-structs(@views,
+            nativesizeof(RawPhoneticUtf8View.new));
+        my Pointer $output .= new;
+        check-status(llev-phonetic-dictionary-new(
+            nativecast(Pointer, $storage), @views.elems,
+            $rules.defined ?? $rules.native-handle !! Pointer,
+            $algorithm.Int, $compact ?? 1 !! 0, $max-terms,
+            $max-total-bytes, $output), 'phonetic-dictionary-new');
+        self.bless(handle => $output, :$compact)
+    }
+
+    method !handle(--> Pointer:D) {
+        X::Liblevenshtein.new(status => CLOSED,
+            operation => 'phonetic-dictionary',
+            detail => 'dictionary is closed').throw if $!closed;
+        $!handle
+    }
+
+    method query(Str:D $term, Int:D :$max-distance = 2,
+        Int:D :$max-query-scalars = 4096,
+        Int:D :$max-results = 4096 --> List:D) {
+        die 'max-distance must be nonnegative and fit size_t'
+            unless 0 <= $max-distance < 2 ** (nativesizeof(size_t) * 8);
+        phonetic-limit($max-query-scalars, 'max-query-scalars');
+        phonetic-limit($max-results, 'max-results');
+        die 'phonetic query exceeds max-query-scalars'
+            if $term.ords.elems > $max-query-scalars;
+        my $bytes = byte-argument($term.encode('utf8'));
+        my Pointer $output .= new;
+        my size_t $count = 0;
+        check-status(llev-phonetic-dictionary-query(self!handle,
+            $bytes.pointer, $bytes.length, $max-distance,
+            $max-query-scalars, $max-results, $output, $count),
+            'phonetic-dictionary-query');
+        copy-phonetic-candidates($output, $count)
+    }
+
+    method !update(Str:D $term, Bool:D $remove,
+        Int:D $max-term-scalars --> Bool:D) {
+        die 'compact phonetic dictionary is immutable' if $!compact;
+        phonetic-limit($max-term-scalars, 'max-term-scalars');
+        die 'phonetic term exceeds max-term-scalars'
+            if $term.ords.elems > $max-term-scalars;
+        my $bytes = byte-argument($term.encode('utf8'));
+        my uint8 $changed = 0;
+        check-status(llev-phonetic-dictionary-update(self!handle,
+            $bytes.pointer, $bytes.length, $remove ?? 1 !! 0,
+            $max-term-scalars, $changed), 'phonetic-dictionary-update');
+        so $changed
+    }
+
+    method insert(Str:D $term, Int:D :$max-term-scalars = 4096 --> Bool:D) {
+        self!update($term, False, $max-term-scalars)
+    }
+
+    method remove(Str:D $term, Int:D :$max-term-scalars = 4096 --> Bool:D) {
+        self!update($term, True, $max-term-scalars)
+    }
+
+    method close(--> Nil) {
+        return if $!closed;
+        llev-phonetic-dictionary-free($!handle);
         $!handle = Pointer;
         $!closed = True;
     }
